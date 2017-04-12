@@ -79,11 +79,11 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
 fn handle_bot_command(server: &IrcServer, command: &str, response_target: &str, response_username: Option<&str>) {
 
     let send_line = |response_username: Option<&str>, line: &str| {
-        let send_line = match response_username {
+        let adjusted_line = match response_username {
             None => String::from(line),
             Some(username) => String::from(username) + ", " + line
         };
-        server.send_privmsg(response_target, &send_line).unwrap();
+        server.send_privmsg(response_target, &adjusted_line).unwrap();
     };
 
     if command == "help" {
