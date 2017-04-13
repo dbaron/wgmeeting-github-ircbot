@@ -197,26 +197,24 @@ impl ChannelData {
         match self.current_topic {
             None => None,
             Some(ref mut data) => {
-                let response = match extract_github_url(&line.message) {
-                    None => None,
-                    Some(url) => {
-                        // FIXME: Add and implement instructions to cancel!
-                        let response = match data.github_url {
-                            None => Some(format!("OK, I'll post this discussion to {}", url)),
-                            Some(ref old_url) => {
-                                if *old_url == url {
-                                    None
-                                } else {
-                                    Some(format!("OK, I'll post this discussion to {} instead of {} like you said before",
-                                                 url,
-                                                 old_url))
-                                }
-                            }
-                        };
-                        data.github_url = Some(url);
-                        response
+                let new_url_option = extract_github_url(&line.message);
+                let response = match (new_url_option.as_ref(), data.github_url.as_ref()) {
+                    (None, _) => None,
+                    // FIXME: Add and implement instructions to cancel!
+                    (Some(new_url), None) => {
+                        Some(format!("OK, I'll post this discussion to {}", new_url))
+                    }
+                    (Some(new_url), Some(old_url)) if old_url == new_url => None,
+                    (Some(new_url), Some(old_url)) => {
+                        Some(format!("OK, I'll post this discussion to {} instead of {} like you said before",
+                                     new_url,
+                                     old_url))
                     }
                 };
+
+                if let Some(new_url) = new_url_option {
+                    data.github_url = Some(new_url);
+                }
 
                 data.lines.push(line);
 
