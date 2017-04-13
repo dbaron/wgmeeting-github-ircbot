@@ -88,7 +88,7 @@ fn handle_bot_command(server: &IrcServer, command: &str, response_target: &str, 
 
     if command == "help" {
         send_line(response_username, "The commands I understand are:");
-        send_line(None, "  help     Send this message.");
+        send_line(None,              "  help     Send this message.");
         return;
     }
 
