@@ -77,11 +77,8 @@ fn main() {
                                     handle_bot_command(&server, command, target, Some(source))
                                 }
                                 None => {
-                                    match channel_data.add_line(line) {
-                                        None => (),
-                                        Some(response) => {
-                                            server.send_privmsg(target, &*response).unwrap();
-                                        }
+                                    if let Some(response) = channel_data.add_line(line) {
+                                        server.send_privmsg(target, &*response).unwrap();
                                     }
                                 }
                             }
@@ -184,11 +181,8 @@ impl ChannelData {
 
     // Returns the response that should be sent to the message over IRC.
     fn add_line(&mut self, line: ChannelLine) -> Option<String> {
-        match strip_ci_prefix(&line.message, "topic:") {
-            None => (),
-            Some(ref topic) => {
-                self.start_topic(line.message[6..].trim_left());
-            }
+        if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
+            self.start_topic(line.message[6..].trim_left());
         }
         if line.source == "trackbot" && line.is_action == true &&
            line.message == "is ending a teleconference." {
@@ -246,17 +240,11 @@ fn extract_github_url(message: &str) -> Option<String> {
         static ref ALLOWED_REPOS: [String; 1] = [format!("dbaron/wgmeeting-github-ircbot")];
     }
     for prefix in ["topic:", "github topic:"].into_iter() {
-        match strip_ci_prefix(&message, prefix) {
-            None => (),
-            Some(ref maybe_url) => {
-                match GITHUB_URL_RE.captures(maybe_url) {
-                    None => (),
-                    Some(ref caps) => {
-                        for repo in ALLOWED_REPOS.into_iter() {
-                            if caps["repo"] == *repo {
-                                return Some(maybe_url.clone());
-                            }
-                        }
+        if let Some(ref maybe_url) = strip_ci_prefix(&message, prefix) {
+            if let Some(ref caps) = GITHUB_URL_RE.captures(maybe_url) {
+                for repo in ALLOWED_REPOS.into_iter() {
+                    if caps["repo"] == *repo {
+                        return Some(maybe_url.clone());
                     }
                 }
             }
