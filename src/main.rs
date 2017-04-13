@@ -3,8 +3,12 @@ extern crate log;
 extern crate env_logger;
 extern crate irc;
 extern crate github;
+#[macro_use]
+extern crate lazy_static;
+extern crate regex;
 
 use irc::client::prelude::*;
+use regex::Regex;
 
 fn main() {
     env_logger::init().unwrap();
@@ -73,7 +77,12 @@ fn main() {
                                     handle_bot_command(&server, command, target, Some(source))
                                 }
                                 None => {
-                                    channel_data.add_line(line);
+                                    match channel_data.add_line(line) {
+                                        None => (),
+                                        Some(response) => {
+                                            server.send_privmsg(target, &*response).unwrap();
+                                        }
+                                    }
                                 }
                             }
                         } else {
@@ -134,6 +143,8 @@ struct ChannelLine {
 }
 
 struct TopicData {
+    topic: String,
+    github_url: Option<String>,
     lines: Vec<ChannelLine>,
 }
 
@@ -142,8 +153,27 @@ struct ChannelData {
 }
 
 impl TopicData {
-    fn new() -> TopicData {
-        TopicData { lines: vec![] }
+    fn new(topic: &str) -> TopicData {
+        let topic_ = String::from(topic);
+        TopicData {
+            topic: topic_,
+            github_url: None,
+            lines: vec![],
+        }
+    }
+}
+
+fn ci_starts_with(s: &str, prefix: &str) -> bool {
+    assert!(prefix.to_lowercase() == prefix);
+
+    s.len() >= prefix.len() && s[0..prefix.len()].to_lowercase() == prefix
+}
+
+fn strip_ci_prefix(s: &str, prefix: &str) -> Option<String> {
+    if ci_starts_with(s, prefix) {
+        Some(String::from(s[prefix.len()..].trim_left()))
+    } else {
+        None
     }
 }
 
@@ -152,29 +182,55 @@ impl ChannelData {
         ChannelData { current_topic: None }
     }
 
-    fn add_line(&mut self, line: ChannelLine) {
-        if line.message.starts_with("Topic:") {
-            self.start_topic();
+    // Returns the response that should be sent to the message over IRC.
+    fn add_line(&mut self, line: ChannelLine) -> Option<String> {
+        match strip_ci_prefix(&line.message, "topic:") {
+            None => (),
+            Some(ref topic) => {
+                self.start_topic(line.message[6..].trim_left());
+            }
         }
         if line.source == "trackbot" && line.is_action == true &&
            line.message == "is ending a teleconference." {
             self.end_topic();
         }
-        print!("{} {} {}\n", line.source, line.is_action, line.message);
         match self.current_topic {
-            None => (),
+            None => None,
             Some(ref mut data) => {
+                let response = match extract_github_url(&line.message) {
+                    None => None,
+                    Some(url) => {
+                        // FIXME: Add and implement instructions to cancel!
+                        let response = match data.github_url {
+                            None => Some(format!("OK, I'll post this discussion to {}", url)),
+                            Some(ref old_url) => {
+                                if *old_url == url {
+                                    None
+                                } else {
+                                    Some(format!("OK, I'll post this discussion to {} instead of {} like you said before",
+                                                 url,
+                                                 old_url))
+                                }
+                            }
+                        };
+                        data.github_url = Some(url);
+                        response
+                    }
+                };
+
                 data.lines.push(line);
+
+                response
             }
         }
     }
 
-    fn start_topic(&mut self) {
+    fn start_topic(&mut self, topic: &str) {
         if self.current_topic.is_some() {
             self.end_topic();
         }
 
-        self.current_topic = Some(TopicData::new());
+        self.current_topic = Some(TopicData::new(topic));
     }
 
     fn end_topic(&mut self) {
@@ -182,4 +238,31 @@ impl ChannelData {
         // FIXME: Do something with the data rather than throwing it away!
         self.current_topic = None;
     }
+}
+
+fn extract_github_url(message: &str) -> Option<String> {
+    lazy_static! {
+        static ref GITHUB_URL_RE: Regex =
+            Regex::new(r"^https://github.com/(?P<repo>[^/]*/[^/]*)/issues/(?P<number>[0-9]+)$")
+            .unwrap();
+        static ref ALLOWED_REPOS: [String; 1] = [format!("dbaron/wgmeeting-github-ircbot")];
+    }
+    for prefix in ["topic:", "github topic:"].into_iter() {
+        match strip_ci_prefix(&message, prefix) {
+            None => (),
+            Some(ref maybe_url) => {
+                match GITHUB_URL_RE.captures(maybe_url) {
+                    None => (),
+                    Some(ref caps) => {
+                        for repo in ALLOWED_REPOS.into_iter() {
+                            if caps["repo"] == *repo {
+                                return Some(maybe_url.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
 }
