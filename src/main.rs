@@ -52,12 +52,28 @@ fn main() {
                         if target == mynick {
                             handle_bot_command(&server, msg, source, None)
                         } else if target.starts_with('#') {
+                            let source_ = String::from(*source);
+                            let line = if msg.starts_with("\x01ACTION ") && msg.ends_with("\x01") {
+                                ChannelLine {
+                                    source: source_,
+                                    is_action: true,
+                                    message: String::from(&msg[8..msg.len() - 1]),
+                                }
+                            } else {
+                                ChannelLine {
+                                    source: source_,
+                                    is_action: false,
+                                    message: msg.clone(),
+                                }
+                            };
+
+                            // FIXME: This needs to handle requests in /me
                             match check_command_in_channel(mynick, msg) {
                                 Some(ref command) => {
                                     handle_bot_command(&server, command, target, Some(source))
                                 }
                                 None => {
-                                    channel_data.add_line(msg);
+                                    channel_data.add_line(line);
                                 }
                             }
                         } else {
@@ -111,12 +127,18 @@ fn handle_bot_command(server: &IrcServer,
               "Sorry, I don't understand that command.  Try 'help'.");
 }
 
+struct ChannelLine {
+    source: String,
+    is_action: bool,
+    message: String,
+}
+
 struct TopicData {
-    lines: Vec<String>,
+    lines: Vec<ChannelLine>,
 }
 
 struct ChannelData {
-    current_topic: TopicData,
+    current_topic: Option<TopicData>,
 }
 
 impl TopicData {
@@ -127,10 +149,37 @@ impl TopicData {
 
 impl ChannelData {
     fn new() -> ChannelData {
-        ChannelData { current_topic: TopicData::new() }
+        ChannelData { current_topic: None }
     }
 
-    fn add_line(&mut self, line: &String) {
-        self.current_topic.lines.push(line.clone())
+    fn add_line(&mut self, line: ChannelLine) {
+        if line.message.starts_with("Topic:") {
+            self.start_topic();
+        }
+        if line.source == "trackbot" && line.is_action == true &&
+           line.message == "is ending a teleconference." {
+            self.end_topic();
+        }
+        print!("{} {} {}\n", line.source, line.is_action, line.message);
+        match self.current_topic {
+            None => (),
+            Some(ref mut data) => {
+                data.lines.push(line);
+            }
+        }
+    }
+
+    fn start_topic(&mut self) {
+        if self.current_topic.is_some() {
+            self.end_topic();
+        }
+
+        self.current_topic = Some(TopicData::new());
+    }
+
+    fn end_topic(&mut self) {
+        // TODO: Test the topic boundary code.
+        // FIXME: Do something with the data rather than throwing it away!
+        self.current_topic = None;
     }
 }
