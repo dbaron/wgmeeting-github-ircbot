@@ -27,6 +27,12 @@ fn main() {
         .. Default::default()
     };
 
+    // FIXME: Eventually this should support multiple channels, plus
+    // options to ask the bot which channels it's in, and which channels
+    // it currently has buffers in.  (Then we can do things like ask the
+    // bot to reboot itself, but it will only do so if it's not busy.)
+    let mut channel_data = ChannelData::new();
+
     let server = IrcServer::from_config(irc_config).unwrap();
     server.identify().unwrap();
     for message in server.iter() {
@@ -48,7 +54,7 @@ fn main() {
                                     handle_bot_command(&server, command, target, Some(source))
                                 },
                                 None => {
-                                    // unimplemented!();
+                                    channel_data.add_line(msg);
                                 }
                             }
                         } else {
@@ -93,4 +99,28 @@ fn handle_bot_command(server: &IrcServer, command: &str, response_target: &str, 
     }
 
     send_line(response_username, "Sorry, I don't understand that command.  Try 'help'.");
+}
+
+struct TopicData {
+    lines: Vec<String>,
+}
+
+struct ChannelData {
+    current_topic: TopicData,
+}
+
+impl TopicData {
+    fn new() -> TopicData {
+        TopicData { lines: vec![] }
+    }
+}
+
+impl ChannelData {
+    fn new() -> ChannelData {
+        ChannelData { current_topic: TopicData::new() }
+    }
+
+    fn add_line(&mut self, line: &String) {
+        self.current_topic.lines.push(line.clone())
+    }
 }
