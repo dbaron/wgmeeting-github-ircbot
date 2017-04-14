@@ -9,6 +9,7 @@ extern crate regex;
 
 use irc::client::prelude::*;
 use regex::Regex;
+use std::thread;
 
 fn main() {
     env_logger::init().unwrap();
@@ -182,7 +183,7 @@ impl ChannelData {
     // Returns the response that should be sent to the message over IRC.
     fn add_line(&mut self, line: ChannelLine) -> Option<String> {
         if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
-            self.start_topic(line.message[6..].trim_left());
+            self.start_topic(topic);
         }
         if line.source == "trackbot" && line.is_action == true &&
            line.message == "is ending a teleconference." {
@@ -227,8 +228,10 @@ impl ChannelData {
 
     fn end_topic(&mut self) {
         // TODO: Test the topic boundary code.
-        // FIXME: Do something with the data rather than throwing it away!
-        self.current_topic = None;
+        if let Some(topic) = self.current_topic.take() {
+            let task = GithubCommentTask::new(topic);
+            task.run();
+        }
     }
 }
 
@@ -251,4 +254,21 @@ fn extract_github_url(message: &str) -> Option<String> {
         }
     }
     None
+}
+
+struct GithubCommentTask {
+    data: TopicData,
+}
+
+impl GithubCommentTask {
+    fn new(data_: TopicData) -> GithubCommentTask {
+        GithubCommentTask { data: data_ }
+    }
+    fn run(self) {
+        thread::spawn(move || { self.main(); });
+    }
+    fn main(& self) {
+        // FIXME: Post a comment in github.
+        unimplemented!();
+    }
 }
