@@ -69,8 +69,10 @@ fn main() {
                         };
                         let mynick = server.current_nickname();
                         if target == mynick {
+                            info!("[{}] {}", source, line);
                             handle_bot_command(&server, &line.message, source, false, None)
                         } else if target.starts_with('#') {
+                            info!("[{}] {}", target, line);
                             match check_command_in_channel(mynick, &line.message) {
                                 Some(ref command) => {
                                     handle_bot_command(&server,
