@@ -95,6 +95,12 @@ fn main() {
                     }
                 }
             }
+            Command::INVITE(ref target, ref channel) => {
+                if target == server.current_nickname() {
+                    // Join channels when invited.
+                    server.send_join(channel).unwrap();
+                }
+            }
             _ => (),
         }
     }
