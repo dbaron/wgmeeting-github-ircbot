@@ -357,7 +357,9 @@ impl GithubCommentTask {
                 let comments = issue.comments();
 
                 let comment_text = format!("{}", self.data);
-                comments.create(&CommentOptions { body: comment_text });
+                comments
+                    .create(&CommentOptions { body: comment_text })
+                    .unwrap();
             } else {
                 warn!("How does {} fail to match now when it matched before?",
                       github_url)
