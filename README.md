@@ -20,18 +20,18 @@ scribe.perl conventions, but that's past minimum-viable-product, I
 think.   Though ScribeNick should probably be doable quickly...)
 
 My previous notes:
-* "Topic github: &lt;url>" or just "Topic: &lt;github-url>"
-    * acknowledge this
-* split on "Topic:" and "trackbot, end meeting"
-    * acknowledge again after pasting
-* answer help command asked explicitly
-* answer other requests asked explicitly
-* answer PMs saying need to be in channel
-* see my thread with chairs
+* [X] "Topic github: &lt;url>" or just "Topic: &lt;github-url>"
+    * [X] acknowledge this
+* [X] split on "Topic:" and "trackbot, end meeting"
+    * [ ] acknowledge again after making comment
+* [X] answer help command asked explicitly
+* [X] answer other requests asked explicitly
+* [ ] answer PMs saying need to be in channel
+* [ ] see my thread with chairs
 
 Alan Stearns suggests also removing the Agenda+ or Agenda+ F2F tags.
 
 
 # Development notes
 
-    RUST_LOG=wgmeeting_github_ircbot cargo run
+    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run
