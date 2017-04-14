@@ -36,11 +36,11 @@ fn main() {
         &empty_map
     };
 
-    // FIXME: Eventually this should support multiple channels, plus
-    // options to ask the bot which channels it's in, and which channels
-    // it currently has buffers in.  (Then we can do things like ask the
-    // bot to reboot itself, but it will only do so if it's not busy.)
-    let mut channel_data = ChannelData::new(&options);
+    // FIXME: Add options to ask the bot which channels it's in, and
+    // which channels it currently has buffers in.  (Then we can do
+    // things like ask the bot to reboot itself, but it will only do so
+    // if it's not busy.)
+    let mut channel_data: HashMap<String, ChannelData> = HashMap::new();
 
     for message in server.iter() {
         let message = message.unwrap(); // panic if there's an error
@@ -80,7 +80,10 @@ fn main() {
                                                        Some(source))
                                 }
                                 None => {
-                                    if let Some(response) = channel_data.add_line(line) {
+                                    if let Some(response) = channel_data
+                                           .entry(target.clone())
+                                           .or_insert_with(|| ChannelData::new(&options))
+                                           .add_line(line) {
                                         server.send_privmsg(target, &*response).unwrap();
                                     }
                                 }
