@@ -14,33 +14,13 @@ use std::thread;
 fn main() {
     env_logger::init().unwrap();
 
-    // This could be in a JSON config, but then we need to figure out how
-    // to find that JSON config
-    let irc_config: Config = Config {
-        owners: Some(vec![format!("dbaron")]),
-        nickname: Some(format!("wgmeeting-github-bot")),
-        alt_nicks: Some(vec![format!("wgmeeting-github-bot-"),
-                             format!("wgmeeting-github-bot--")]),
-        username: Some(format!("dbaron-gh-bot")),
-        realname: Some(format!("Bot to add meeting minutes to github issues.")),
-        server: Some(format!("irc.w3.org")),
-        port: Some(6667),
-        use_ssl: Some(false),
-        encoding: Some(format!("UTF-8")),
-        channels: Some(vec![format!("#cssbottest")]),
-        user_info: Some(format!("Bot to add meeting minutes to github issues.")),
-        // FIXME: why doesn't this work as documented?
-        //source: Some(format!("https://github.com/dbaron/wgmeeting-github-ircbot")),
-        ..Default::default()
-    };
-
     // FIXME: Eventually this should support multiple channels, plus
     // options to ask the bot which channels it's in, and which channels
     // it currently has buffers in.  (Then we can do things like ask the
     // bot to reboot itself, but it will only do so if it's not busy.)
     let mut channel_data = ChannelData::new();
 
-    let server = IrcServer::from_config(irc_config).unwrap();
+    let server = IrcServer::new("config.json").unwrap();
     server.identify().unwrap();
     for message in server.iter() {
         let message = message.unwrap(); // panic if there's an error
