@@ -16,6 +16,7 @@ use std::collections::HashMap;
 use regex::Regex;
 
 use irc::client::prelude::*;
+use irc::client::data::command::Command;
 
 use hyper::Client;
 use hyper::net::HttpsConnector;
@@ -70,22 +71,24 @@ fn main() {
                         let mynick = server.current_nickname();
                         if target == mynick {
                             info!("[{}] {}", source, line);
-                            handle_bot_command(&server, &line.message, source, false, None)
+                            handle_bot_command(&server, None, &line.message, source, false, None)
                         } else if target.starts_with('#') {
                             info!("[{}] {}", target, line);
+                            let this_channel_data =
+                                channel_data
+                                    .entry(target.clone())
+                                    .or_insert_with(|| ChannelData::new(&options));
                             match check_command_in_channel(mynick, &line.message) {
                                 Some(ref command) => {
                                     handle_bot_command(&server,
+                                                       Some(this_channel_data),
                                                        command,
                                                        target,
                                                        line.is_action,
                                                        Some(source))
                                 }
                                 None => {
-                                    if let Some(response) = channel_data
-                                           .entry(target.clone())
-                                           .or_insert_with(|| ChannelData::new(&options))
-                                           .add_line(line) {
+                                    if let Some(response) = this_channel_data.add_line(line) {
                                         server.send_privmsg(target, &*response).unwrap();
                                     }
                                 }
@@ -123,6 +126,7 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
 }
 
 fn handle_bot_command(server: &IrcServer,
+                      this_channel_data: Option<&mut ChannelData>,
                       command: &str,
                       response_target: &str,
                       response_is_action: bool,
@@ -145,6 +149,25 @@ fn handle_bot_command(server: &IrcServer,
     if command == "help" {
         send_line(response_username, "The commands I understand are:");
         send_line(None, "  help     Send this message.");
+        send_line(None,
+                  "  bye      Leave the channel.  (You can /invite me back.)");
+        return;
+    }
+
+    if command == "bye" {
+        match this_channel_data {
+            None => {
+                send_line(response_username, "'bye' only works in a channel");
+            }
+            Some(this_channel_data) => {
+                this_channel_data.end_topic();
+                server
+                    .send(Command::PART(String::from(response_target),
+                                        Some(format!("Leaving at request of {}.  Feel free to /invite me back.",
+                                                     response_username.unwrap()))))
+                    .unwrap();
+            }
+        }
         return;
     }
 
@@ -283,10 +306,7 @@ impl<'opts> ChannelData<'opts> {
     }
 
     fn start_topic(&mut self, topic: &str) {
-        if self.current_topic.is_some() {
-            self.end_topic();
-        }
-
+        self.end_topic();
         self.current_topic = Some(TopicData::new(topic));
     }
 
