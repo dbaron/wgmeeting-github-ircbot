@@ -31,11 +31,7 @@ fn main() {
     server.identify().unwrap();
 
     let empty_map = HashMap::new();
-    let options = if let Some(ref opts) = server.config().options {
-        opts
-    } else {
-        &empty_map
-    };
+    let options = server.config().options.as_ref().unwrap_or(&empty_map);
 
     // FIXME: Add options to ask the bot which channels it's in, and
     // which channels it currently has buffers in.  (Then we can do
@@ -149,8 +145,32 @@ fn handle_bot_command(server: &IrcServer,
     if command == "help" {
         send_line(response_username, "The commands I understand are:");
         send_line(None, "  help     Send this message.");
+        send_line(None, "  intro    Send a message describing what I do.");
         send_line(None,
                   "  bye      Leave the channel.  (You can /invite me back.)");
+        return;
+    }
+
+    if command == "intro" {
+        let config = server.config();
+        let empty_map = HashMap::new();
+        let options = config.options.as_ref().unwrap_or(&empty_map);
+        send_line(None,
+                  "My job is to leave comments in github when the group discusses github issues and takes minutes in IRC.");
+        send_line(None,
+                  "I separate discussions by the \"Topic:\" lines, and I know what github issues to use only by lines of the form \"Topic github: <url>\", or if the \"Topic:\" line is a github URL.");
+        send_line(None,
+                  &*format!("I'm only allowed to comment on issues in the repositories: {}.",
+                            options["github_repos_allowed"]));
+        let owners = if let Some(v) = config.owners.as_ref() {
+            v.join(" ")
+        } else {
+            String::from("")
+        };
+        send_line(None,
+                  &*format!("My source code is at {} and I'm run by {}.",
+                            options["source"],
+                            owners));
         return;
     }
 
