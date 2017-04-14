@@ -144,6 +144,7 @@ struct TopicData {
     topic: String,
     github_url: Option<String>,
     lines: Vec<ChannelLine>,
+    resolutions: Vec<String>,
 }
 
 struct ChannelData<'opts> {
@@ -168,15 +169,26 @@ impl TopicData {
             topic: topic_,
             github_url: None,
             lines: vec![],
+            resolutions: vec![],
         }
     }
 }
 
 impl fmt::Display for TopicData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f,
-                    "The CSS Working Group just discussed {}.\n\n",
-                    self.topic));
+        if self.resolutions.len() == 0 {
+            try!(write!(f,
+                        "The CSS Working Group just discussed {}.\n\n",
+                        self.topic));
+        } else {
+            try!(write!(f,
+                        "The CSS Working Group just discussed {}, and agreed to the following resolutions:\n\n",
+                        self.topic));
+            for resolution in &self.resolutions {
+                try!(write!(f, "```\n{}\n```\n\n", resolution));
+            }
+        }
+
         try!(write!(f,
                     "<details><summary>The full IRC log of that discussion</summary>\n"));
         try!(write!(f, "\n```\n"));
@@ -239,6 +251,11 @@ impl<'opts> ChannelData<'opts> {
 
                 if let Some(new_url) = new_url_option {
                     data.github_url = Some(new_url);
+                }
+
+                if line.message.starts_with("RESOLUTION") ||
+                   line.message.starts_with("RESOLVED") {
+                    data.resolutions.push(line.message.clone());
                 }
 
                 data.lines.push(line);
