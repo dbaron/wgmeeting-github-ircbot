@@ -12,6 +12,7 @@
   "user_info": "Bot to add meeting minutes to github issues.",
   "source": "https://github.com/dbaron/wgmeeting-github-ircbot",
   "options": {
+    "github_repos_allowed": "dbaron/wgmeeting-github-ircbot"
   }
 }
 

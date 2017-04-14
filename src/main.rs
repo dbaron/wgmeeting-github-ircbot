@@ -10,18 +10,27 @@ extern crate regex;
 use irc::client::prelude::*;
 use regex::Regex;
 use std::thread;
+use std::collections::HashMap;
 
 fn main() {
     env_logger::init().unwrap();
+
+    let server = IrcServer::new("config.json").unwrap();
+    server.identify().unwrap();
+
+    let empty_map = HashMap::new();
+    let options = if let Some(ref opts) = server.config().options {
+        opts
+    } else {
+        &empty_map
+    };
 
     // FIXME: Eventually this should support multiple channels, plus
     // options to ask the bot which channels it's in, and which channels
     // it currently has buffers in.  (Then we can do things like ask the
     // bot to reboot itself, but it will only do so if it's not busy.)
-    let mut channel_data = ChannelData::new();
+    let mut channel_data = ChannelData::new(&options);
 
-    let server = IrcServer::new("config.json").unwrap();
-    server.identify().unwrap();
     for message in server.iter() {
         let message = message.unwrap(); // panic if there's an error
 
@@ -126,8 +135,9 @@ struct TopicData {
     lines: Vec<ChannelLine>,
 }
 
-struct ChannelData {
+struct ChannelData<'opts> {
     current_topic: Option<TopicData>,
+    options: &'opts HashMap<String, String>,
 }
 
 impl TopicData {
@@ -155,9 +165,12 @@ fn strip_ci_prefix(s: &str, prefix: &str) -> Option<String> {
     }
 }
 
-impl ChannelData {
-    fn new() -> ChannelData {
-        ChannelData { current_topic: None }
+impl<'opts> ChannelData<'opts> {
+    fn new(options_: &'opts HashMap<String, String>) -> ChannelData {
+        ChannelData {
+            current_topic: None,
+            options: options_,
+        }
     }
 
     // Returns the response that should be sent to the message over IRC.
@@ -172,7 +185,7 @@ impl ChannelData {
         match self.current_topic {
             None => None,
             Some(ref mut data) => {
-                let new_url_option = extract_github_url(&line.message);
+                let new_url_option = extract_github_url(&line.message, self.options);
                 let response = match (new_url_option.as_ref(), data.github_url.as_ref()) {
                     (None, _) => None,
                     // FIXME: Add and implement instructions to cancel!
@@ -215,17 +228,17 @@ impl ChannelData {
     }
 }
 
-fn extract_github_url(message: &str) -> Option<String> {
+fn extract_github_url(message: &str, options: &HashMap<String, String>) -> Option<String> {
     lazy_static! {
         static ref GITHUB_URL_RE: Regex =
             Regex::new(r"^https://github.com/(?P<repo>[^/]*/[^/]*)/issues/(?P<number>[0-9]+)$")
             .unwrap();
-        static ref ALLOWED_REPOS: [String; 1] = [format!("dbaron/wgmeeting-github-ircbot")];
     }
+    let ref allowed_repos = options["github_repos_allowed"];
     for prefix in ["topic:", "github topic:"].into_iter() {
         if let Some(ref maybe_url) = strip_ci_prefix(&message, prefix) {
             if let Some(ref caps) = GITHUB_URL_RE.captures(maybe_url) {
-                for repo in ALLOWED_REPOS.into_iter() {
+                for repo in allowed_repos.split_whitespace() {
                     if caps["repo"] == *repo {
                         return Some(maybe_url.clone());
                     }
@@ -247,7 +260,7 @@ impl GithubCommentTask {
     fn run(self) {
         thread::spawn(move || { self.main(); });
     }
-    fn main(& self) {
+    fn main(&self) {
         // FIXME: Post a comment in github.
         unimplemented!();
     }
