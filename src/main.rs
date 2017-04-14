@@ -53,29 +53,31 @@ fn main() {
                         warn!("PRIVMSG without a source! {}", message);
                     }
                     Some(ref source) => {
+                        let source_ = String::from(*source);
+                        let line = if msg.starts_with("\x01ACTION ") && msg.ends_with("\x01") {
+                            ChannelLine {
+                                source: source_,
+                                is_action: true,
+                                message: String::from(&msg[8..msg.len() - 1]),
+                            }
+                        } else {
+                            ChannelLine {
+                                source: source_,
+                                is_action: false,
+                                message: msg.clone(),
+                            }
+                        };
                         let mynick = server.current_nickname();
                         if target == mynick {
-                            handle_bot_command(&server, msg, source, None)
+                            handle_bot_command(&server, &line.message, source, false, None)
                         } else if target.starts_with('#') {
-                            let source_ = String::from(*source);
-                            let line = if msg.starts_with("\x01ACTION ") && msg.ends_with("\x01") {
-                                ChannelLine {
-                                    source: source_,
-                                    is_action: true,
-                                    message: String::from(&msg[8..msg.len() - 1]),
-                                }
-                            } else {
-                                ChannelLine {
-                                    source: source_,
-                                    is_action: false,
-                                    message: msg.clone(),
-                                }
-                            };
-
-                            // FIXME: This needs to handle requests in /me
-                            match check_command_in_channel(mynick, msg) {
+                            match check_command_in_channel(mynick, &line.message) {
                                 Some(ref command) => {
-                                    handle_bot_command(&server, command, target, Some(source))
+                                    handle_bot_command(&server,
+                                                       command,
+                                                       target,
+                                                       line.is_action,
+                                                       Some(source))
                                 }
                                 None => {
                                     if let Some(response) = channel_data.add_line(line) {
@@ -112,12 +114,17 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
 fn handle_bot_command(server: &IrcServer,
                       command: &str,
                       response_target: &str,
+                      response_is_action: bool,
                       response_username: Option<&str>) {
 
     let send_line = |response_username: Option<&str>, line: &str| {
-        let adjusted_line = match response_username {
+        let line_with_nick = match response_username {
             None => String::from(line),
             Some(username) => String::from(username) + ", " + line,
+        };
+        let adjusted_line = match response_is_action {
+            false => line_with_nick,
+            true => format!("\x01ACTION {}\x01", line_with_nick),
         };
         server
             .send_privmsg(response_target, &adjusted_line)
@@ -253,8 +260,7 @@ impl<'opts> ChannelData<'opts> {
                     data.github_url = Some(new_url);
                 }
 
-                if line.message.starts_with("RESOLUTION") ||
-                   line.message.starts_with("RESOLVED") {
+                if line.message.starts_with("RESOLUTION") || line.message.starts_with("RESOLVED") {
                     data.resolutions.push(line.message.clone());
                 }
 
