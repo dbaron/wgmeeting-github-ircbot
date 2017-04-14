@@ -174,8 +174,11 @@ impl TopicData {
 
 impl fmt::Display for TopicData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(f, "The CSS Working Group just discussed {}.\n\n", self.topic));
-        try!(write!(f, "<details><summary>The full IRC log of that discussion</summary>\n"));
+        try!(write!(f,
+                    "The CSS Working Group just discussed {}.\n\n",
+                    self.topic));
+        try!(write!(f,
+                    "<details><summary>The full IRC log of that discussion</summary>\n"));
         try!(write!(f, "\n```\n"));
         for line in &self.lines {
             try!(write!(f, "{}\n", line));
