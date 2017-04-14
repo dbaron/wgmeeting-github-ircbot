@@ -8,7 +8,7 @@
   "port": 6667,
   "use_ssl": false,
   "encoding": "UTF-8",
-  "channels": ["#css", "#cssbottest"],
+  "channels": ["#css", "#fx", "#houdini", "#cssbottest"],
   "user_info": "Bot to add meeting minutes to github issues.",
   "source": "https://github.com/dbaron/wgmeeting-github-ircbot",
   "options": {
