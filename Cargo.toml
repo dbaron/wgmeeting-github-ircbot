@@ -6,7 +6,20 @@ authors = ["L. David Baron <dbaron@dbaron.org>"]
 [dependencies]
 log = "0.3.7"
 env_logger = "0.4.2"
-irc = "0.11.6"
-github = "0.1.2"
 lazy_static = "0.2.6"
 regex = "0.2.1"
+hubcaps = "0.3.1"
+hyper = "0.10.8"
+hyper-native-tls = "0.2.2"
+serde_json = "0.9.10"
+
+# Depend on IRC, but remove its optional openssl dependency, since
+# irc.w3.org doesn't support SSL, and since it conflicts with the
+# openssl dependency of hyper-native-tls.
+[dependencies.irc]
+version = "0.11.6"
+default-features = false
+features = ["ctcp", "encode"]
+
+[replace]
+"hubcaps:0.3.1" = { path = "hubcaps" }

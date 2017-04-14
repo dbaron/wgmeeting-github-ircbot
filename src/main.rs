@@ -2,15 +2,26 @@
 extern crate log;
 extern crate env_logger;
 extern crate irc;
-extern crate github;
 #[macro_use]
 extern crate lazy_static;
 extern crate regex;
+extern crate hyper;
+extern crate hubcaps;
+extern crate hyper_native_tls;
+extern crate serde_json;
 
-use irc::client::prelude::*;
-use regex::Regex;
+use std::fmt;
 use std::thread;
 use std::collections::HashMap;
+use regex::Regex;
+
+use irc::client::prelude::*;
+
+use hyper::Client;
+use hyper::net::HttpsConnector;
+use hyper_native_tls::NativeTlsClient;
+use hubcaps::{Credentials, Github};
+use hubcaps::comments::CommentOptions;
 
 fn main() {
     env_logger::init().unwrap();
@@ -140,6 +151,16 @@ struct ChannelData<'opts> {
     options: &'opts HashMap<String, String>,
 }
 
+impl fmt::Display for ChannelLine {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_action {
+            write!(f, "* {} {}", self.source, self.message)
+        } else {
+            write!(f, "<{}> {}", self.source, self.message)
+        }
+    }
+}
+
 impl TopicData {
     fn new(topic: &str) -> TopicData {
         let topic_ = String::from(topic);
@@ -148,6 +169,16 @@ impl TopicData {
             github_url: None,
             lines: vec![],
         }
+    }
+}
+
+impl fmt::Display for TopicData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        try!(write!(f, "The CSS Working Group just discussed {}.\n", self.topic));
+        for line in &self.lines {
+            try!(write!(f, "{}\n", line));
+        }
+        Ok(())
     }
 }
 
@@ -222,8 +253,10 @@ impl<'opts> ChannelData<'opts> {
     fn end_topic(&mut self) {
         // TODO: Test the topic boundary code.
         if let Some(topic) = self.current_topic.take() {
-            let task = GithubCommentTask::new(topic);
-            task.run();
+            if topic.github_url.is_some() {
+                let task = GithubCommentTask::new(topic, self.options);
+                task.run();
+            }
         }
     }
 }
@@ -251,17 +284,44 @@ fn extract_github_url(message: &str, options: &HashMap<String, String>) -> Optio
 
 struct GithubCommentTask {
     data: TopicData,
+    github: Github,
 }
 
 impl GithubCommentTask {
-    fn new(data_: TopicData) -> GithubCommentTask {
-        GithubCommentTask { data: data_ }
+    fn new(data_: TopicData, options: &HashMap<String, String>) -> GithubCommentTask {
+        let github_ =
+            Github::new(&*options["github_uastring"],
+                        Client::with_connector(HttpsConnector::new(NativeTlsClient::new()
+                                                                       .unwrap())),
+                        Credentials::Token(options["github_access_token"].clone()));
+        GithubCommentTask {
+            data: data_,
+            github: github_,
+        }
     }
     fn run(self) {
         thread::spawn(move || { self.main(); });
     }
     fn main(&self) {
-        // FIXME: Post a comment in github.
-        unimplemented!();
+        lazy_static! {
+            static ref GITHUB_URL_RE: Regex =
+                Regex::new(r"^https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/issues/(?P<number>[0-9]+)$")
+                .unwrap();
+        }
+
+        if let Some(ref github_url) = self.data.github_url {
+            if let Some(ref caps) = GITHUB_URL_RE.captures(github_url) {
+                let repo = self.github
+                    .repo(String::from(&caps["owner"]), String::from(&caps["repo"]));
+                let issue = repo.issue(caps["number"].parse::<u64>().unwrap());
+                let comments = issue.comments();
+
+                let comment_text = format!("{}", self.data);
+                comments.create(&CommentOptions { body: comment_text });
+            } else {
+                warn!("How does {} fail to match now when it matched before?",
+                      github_url)
+            }
+        }
     }
 }
