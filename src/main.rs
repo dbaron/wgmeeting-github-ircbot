@@ -31,8 +31,11 @@ fn main() {
         IrcServer::new("config.json").expect("Couldn't initialize server with config.json");
     server.identify().unwrap();
 
-    let empty_map = HashMap::new();
-    let options = server.config().options.as_ref().unwrap_or(&empty_map);
+    let options = server
+        .config()
+        .options
+        .as_ref()
+        .expect("No options property within configuration?");
 
     // FIXME: Add options to ask the bot which channels it's in, and
     // which channels it currently has buffers in.  (Then we can do
@@ -68,7 +71,13 @@ fn main() {
                         let mynick = server.current_nickname();
                         if target == mynick {
                             info!("[{}] {}", source, line);
-                            handle_bot_command(&server, None, &line.message, source, false, None)
+                            handle_bot_command(&server,
+                                               options,
+                                               None,
+                                               &line.message,
+                                               source,
+                                               false,
+                                               None)
                         } else if target.starts_with('#') {
                             info!("[{}] {}", target, line);
                             let this_channel_data =
@@ -78,6 +87,7 @@ fn main() {
                             match check_command_in_channel(mynick, &line.message) {
                                 Some(ref command) => {
                                     handle_bot_command(&server,
+                                                       options,
                                                        Some(this_channel_data),
                                                        command,
                                                        target,
@@ -123,6 +133,7 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
 }
 
 fn handle_bot_command(server: &IrcServer,
+                      options: &HashMap<String, String>,
                       this_channel_data: Option<&mut ChannelData>,
                       command: &str,
                       response_target: &str,
@@ -154,8 +165,6 @@ fn handle_bot_command(server: &IrcServer,
 
     if command == "intro" {
         let config = server.config();
-        let empty_map = HashMap::new();
-        let options = config.options.as_ref().unwrap_or(&empty_map);
         send_line(None,
                   "My job is to leave comments in github when the group discusses github issues and takes minutes in IRC.");
         send_line(None,
