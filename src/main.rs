@@ -274,12 +274,15 @@ impl fmt::Display for TopicData {
     }
 }
 
+/// A case-insensitive version of starts_with.
 fn ci_starts_with(s: &str, prefix: &str) -> bool {
     assert!(prefix.to_lowercase() == prefix);
 
     s.len() >= prefix.len() && s[0..prefix.len()].to_lowercase() == prefix
 }
 
+/// Remove a case-insensitive start of the line, and if that prefix is
+/// present return the rest of the line.
 fn strip_ci_prefix(s: &str, prefix: &str) -> Option<String> {
     if ci_starts_with(s, prefix) {
         Some(String::from(s[prefix.len()..].trim_left()))
