@@ -27,9 +27,7 @@ My previous notes:
 * [X] answer help command asked explicitly
 * [X] answer other requests asked explicitly
 * [ ] answer PMs saying need to be in channel
-* [ ] see my thread with chairs
-
-Alan Stearns suggests also removing the Agenda+ or Agenda+ F2F tags.
+* [ ] Alan Stearns suggests also removing the Agenda+ or Agenda+ F2F tags.
 
 
 # Development notes
