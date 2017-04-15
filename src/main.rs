@@ -10,6 +10,7 @@ extern crate hubcaps;
 extern crate hyper_native_tls;
 extern crate serde_json;
 
+use std::env;
 use std::fmt;
 use std::thread;
 use std::collections::HashMap;
@@ -27,8 +28,23 @@ use hubcaps::comments::CommentOptions;
 fn main() {
     env_logger::init().unwrap();
 
-    let server =
-        IrcServer::new("config.json").expect("Couldn't initialize server with config.json");
+    let config_file = {
+        let mut config_file = None;
+        let mut arg_count = 0;
+        for arg in env::args_os() {
+            arg_count = arg_count + 1;
+            if arg_count == 1 {
+                continue;
+            }
+            if arg_count > 2 {
+                panic!("Expected only a single command-line argument, the JSON configuration file.");
+            }
+            config_file = Some(arg);
+        }
+        config_file.expect("Expected a single command-line argument, the JSON configuration file.")
+    };
+
+    let server = IrcServer::new(config_file).expect("Couldn't initialize server with given configuration file");
     server.identify().unwrap();
 
     let options = server
