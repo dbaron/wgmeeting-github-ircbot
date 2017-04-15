@@ -13,7 +13,6 @@ extern crate serde_json;
 use std::fmt;
 use std::thread;
 use std::collections::HashMap;
-use std::process;
 use regex::Regex;
 
 use irc::client::prelude::*;
@@ -28,13 +27,8 @@ use hubcaps::comments::CommentOptions;
 fn main() {
     env_logger::init().unwrap();
 
-    let server = IrcServer::new("config.json");
-    if server.is_err() {
-        print!("Couldn't initialize server with config.json:\n{}\n",
-               server.err().unwrap());
-        process::exit(1);
-    }
-    let server = server.unwrap();
+    let server =
+        IrcServer::new("config.json").expect("Couldn't initialize server with config.json");
     server.identify().unwrap();
 
     let empty_map = HashMap::new();
