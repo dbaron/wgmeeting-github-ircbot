@@ -148,9 +148,10 @@ fn handle_bot_command(server: &IrcServer,
             None => String::from(line),
             Some(username) => String::from(username) + ", " + line,
         };
-        let adjusted_line = match response_is_action {
-            false => line_with_nick,
-            true => format!("\x01ACTION {}\x01", line_with_nick),
+        let adjusted_line = if response_is_action {
+            format!("\x01ACTION {}\x01", line_with_nick)
+        } else {
+            line_with_nick
         };
         server
             .send_privmsg(response_target, &adjusted_line)
