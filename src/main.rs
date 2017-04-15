@@ -28,21 +28,16 @@ use hubcaps::comments::CommentOptions;
 fn main() {
     env_logger::init().unwrap();
 
-    let config_file = {
-        let mut config_file = None;
-        let mut arg_count = 0;
-        for arg in env::args_os() {
-            arg_count = arg_count + 1;
-            if arg_count == 1 {
-                continue;
-            }
-            if arg_count > 2 {
+    let config_file =
+        {
+            let mut args = env::args_os();
+            args.next().expect("What, no program name?");
+            let config_file = args.next().expect("Expected a single command-line argument, the JSON configuration file.");
+            if args.next().is_some() {
                 panic!("Expected only a single command-line argument, the JSON configuration file.");
             }
-            config_file = Some(arg);
-        }
-        config_file.expect("Expected a single command-line argument, the JSON configuration file.")
-    };
+            config_file
+        };
 
     let server = IrcServer::new(config_file).expect("Couldn't initialize server with given configuration file");
     server.identify().unwrap();
