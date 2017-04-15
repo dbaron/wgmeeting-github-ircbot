@@ -30,8 +30,7 @@ fn main() {
 
     let config_file =
         {
-            let mut args = env::args_os();
-            args.next().expect("What, no program name?");
+            let mut args = env::args_os().skip(1); // skip program name
             let config_file = args.next().expect("Expected a single command-line argument, the JSON configuration file.");
             if args.next().is_some() {
                 panic!("Expected only a single command-line argument, the JSON configuration file.");
