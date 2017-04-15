@@ -50,8 +50,8 @@ fn main() {
             Command::PRIVMSG(ref target, ref msg) => {
                 match message.source_nickname() {
                     None => {
-                        // FIXME: trailing \n
-                        warn!("PRIVMSG without a source! {}", message);
+                        warn!("PRIVMSG without a source! {}",
+                              format!("{}", message).trim());
                     }
                     Some(ref source) => {
                         let source_ = String::from(*source);
@@ -70,6 +70,7 @@ fn main() {
                         };
                         let mynick = server.current_nickname();
                         if target == mynick {
+                            // An actual private message.
                             info!("[{}] {}", source, line);
                             handle_bot_command(&server,
                                                options,
@@ -79,6 +80,7 @@ fn main() {
                                                false,
                                                None)
                         } else if target.starts_with('#') {
+                            // A message in a channel.
                             info!("[{}] {}", target, line);
                             let this_channel_data =
                                 channel_data
@@ -101,8 +103,9 @@ fn main() {
                                 }
                             }
                         } else {
-                            // FIXME: trailing \n
-                            warn!("UNEXPECTED TARGET {} in message {}", target, message);
+                            warn!("UNEXPECTED TARGET {} in message {}",
+                                  target,
+                                  format!("{}", message).trim());
                         }
                     }
                 }
