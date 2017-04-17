@@ -181,7 +181,7 @@ fn handle_bot_command<'opts>(server: &IrcServer,
         send_line(None,
                   "My job is to leave comments in github when the group discusses github issues and takes minutes in IRC.");
         send_line(None,
-                  "I separate discussions by the \"Topic:\" lines, and I know what github issues to use only by lines of the form \"Topic github: <url>\", or if the \"Topic:\" line is a github URL.");
+                  "I separate discussions by the \"Topic:\" lines, and I know what github issues to use only by lines of the form \"GitHub topic: <url> | none\", or if the \"Topic:\" line is a github URL.");
         send_line(None,
                   &*format!("I'm only allowed to comment on issues in the repositories: {}.",
                             options["github_repos_allowed"]));
@@ -347,14 +347,15 @@ impl<'opts> ChannelData<'opts> {
             None => None,
             Some(ref mut data) => {
                 let new_url_option = extract_github_url(&line.message, self.options);
-                let response = match (new_url_option.as_ref(), data.github_url.as_ref()) {
+                let response = match (new_url_option.as_ref(), &data.github_url) {
                     (None, _) => None,
-                    // FIXME: Add and implement instructions to cancel!
-                    (Some(new_url), None) => {
+                    (Some(&None), &None) => None,
+                    (Some(&None), _) => Some(String::from("OK, I won't post this discussion to GitHub")),
+                    (Some(&Some(ref new_url)), &None) => {
                         Some(format!("OK, I'll post this discussion to {}", new_url))
                     }
-                    (Some(new_url), Some(old_url)) if old_url == new_url => None,
-                    (Some(new_url), Some(old_url)) => {
+                    (Some(new_url), old_url) if *old_url == *new_url => None,
+                    (Some(&Some(ref new_url)), &Some(ref old_url)) => {
                         Some(format!("OK, I'll post this discussion to {} instead of {} like you said before",
                                      new_url,
                                      old_url))
@@ -362,7 +363,7 @@ impl<'opts> ChannelData<'opts> {
                 };
 
                 if let Some(new_url) = new_url_option {
-                    data.github_url = Some(new_url);
+                    data.github_url = new_url;
                 }
 
                 if line.message.starts_with("RESOLUTION") || line.message.starts_with("RESOLVED") {
@@ -392,7 +393,7 @@ impl<'opts> ChannelData<'opts> {
     }
 }
 
-fn extract_github_url(message: &str, options: &HashMap<String, String>) -> Option<String> {
+fn extract_github_url(message: &str, options: &HashMap<String, String>) -> Option<Option<String>> {
     lazy_static! {
         static ref GITHUB_URL_RE: Regex =
             Regex::new(r"^https://github.com/(?P<repo>[^/]*/[^/]*)/issues/(?P<number>[0-9]+)$")
@@ -401,10 +402,12 @@ fn extract_github_url(message: &str, options: &HashMap<String, String>) -> Optio
     let ref allowed_repos = options["github_repos_allowed"];
     for prefix in ["topic:", "github topic:"].into_iter() {
         if let Some(ref maybe_url) = strip_ci_prefix(&message, prefix) {
-            if let Some(ref caps) = GITHUB_URL_RE.captures(maybe_url) {
+            if maybe_url.to_lowercase() == "none" {
+                return Some(None);
+            } else if let Some(ref caps) = GITHUB_URL_RE.captures(maybe_url) {
                 for repo in allowed_repos.split_whitespace() {
                     if caps["repo"] == *repo {
-                        return Some(maybe_url.clone());
+                        return Some(Some(maybe_url.clone()));
                     }
                 }
             }
