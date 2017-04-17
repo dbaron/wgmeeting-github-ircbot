@@ -32,4 +32,6 @@ My previous notes:
 
 # Development notes
 
-    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run
+Put the github API key in ./src/config.json and then:
+
+    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run [--release] ./src/config.json
