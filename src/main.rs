@@ -47,10 +47,7 @@ fn main() {
         .as_ref()
         .expect("No options property within configuration?");
 
-    // FIXME: Add options to ask the bot which channels it's in, and
-    // which channels it currently has buffers in.  (Then we can do
-    // things like ask the bot to reboot itself, but it will only do so
-    // if it's not busy.)
+    // FIXME: Add a way to ask the bot to reboot itself?
     let mut channel_data: HashMap<String, ChannelData> = HashMap::new();
 
     for message in server.iter() {
@@ -84,7 +81,7 @@ fn main() {
                             info!("[{}] {}", source, line);
                             handle_bot_command(&server,
                                                options,
-                                               None,
+                                               &mut channel_data,
                                                &line.message,
                                                source,
                                                false,
@@ -92,21 +89,22 @@ fn main() {
                         } else if target.starts_with('#') {
                             // A message in a channel.
                             info!("[{}] {}", target, line);
-                            let this_channel_data =
-                                channel_data
-                                    .entry(target.clone())
-                                    .or_insert_with(|| ChannelData::new(&options));
                             match check_command_in_channel(mynick, &line.message) {
                                 Some(ref command) => {
                                     handle_bot_command(&server,
                                                        options,
-                                                       Some(this_channel_data),
+                                                       &mut channel_data,
                                                        command,
                                                        target,
                                                        line.is_action,
                                                        Some(source))
                                 }
                                 None => {
+                                    // FIXME: code duplication
+                                    let this_channel_data =
+                                        channel_data
+                                            .entry(target.clone())
+                                            .or_insert_with(|| ChannelData::new(options));
                                     if let Some(response) = this_channel_data.add_line(line) {
                                         server.send_privmsg(target, &*response).unwrap();
                                     }
@@ -145,13 +143,13 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
     Some(String::from(after_punct.trim_left()))
 }
 
-fn handle_bot_command(server: &IrcServer,
-                      options: &HashMap<String, String>,
-                      this_channel_data: Option<&mut ChannelData>,
-                      command: &str,
-                      response_target: &str,
-                      response_is_action: bool,
-                      response_username: Option<&str>) {
+fn handle_bot_command<'opts>(server: &IrcServer,
+                             options: &'opts HashMap<String, String>,
+                             all_channel_data: &mut HashMap<String, ChannelData<'opts>>,
+                             command: &str,
+                             response_target: &str,
+                             response_is_action: bool,
+                             response_username: Option<&str>) {
 
     let send_line = |response_username: Option<&str>, line: &str| {
         let line_with_nick = match response_username {
@@ -172,6 +170,7 @@ fn handle_bot_command(server: &IrcServer,
         send_line(response_username, "The commands I understand are:");
         send_line(None, "  help     Send this message.");
         send_line(None, "  intro    Send a message describing what I do.");
+        send_line(None, "  status   Send a message with current bot status.");
         send_line(None,
                   "  bye      Leave the channel.  (You can /invite me back.)");
         return;
@@ -198,19 +197,44 @@ fn handle_bot_command(server: &IrcServer,
         return;
     }
 
+    if command == "status" {
+        send_line(response_username,
+                  "I currently have data for the following channels:");
+        let mut sorted_channels: Vec<&String> = all_channel_data.keys().collect();
+        sorted_channels.sort();
+        for channel in sorted_channels {
+            let ref channel_data = all_channel_data[channel];
+            if let Some(ref topic) = channel_data.current_topic {
+                send_line(None,
+                          &*format!("  {} ({} lines buffered on \"{}\")",
+                                    channel,
+                                    topic.lines.len(),
+                                    topic.topic));
+                match topic.github_url {
+                    None => send_line(None, "    no GitHub URL to comment on"),
+                    Some(ref github_url) => {
+                        send_line(None, &*format!("    will comment on {}", github_url))
+                    }
+                };
+            } else {
+                send_line(None, &*format!("  {} (no topic data buffered)", channel));
+            }
+        }
+        return;
+    }
+
     if command == "bye" {
-        match this_channel_data {
-            None => {
-                send_line(response_username, "'bye' only works in a channel");
-            }
-            Some(this_channel_data) => {
-                this_channel_data.end_topic();
-                server
-                    .send(Command::PART(String::from(response_target),
-                                        Some(format!("Leaving at request of {}.  Feel free to /invite me back.",
-                                                     response_username.unwrap()))))
-                    .unwrap();
-            }
+        if response_target.starts_with('#') {
+            // FIXME: code duplication
+            let this_channel_data = all_channel_data
+                .entry(String::from(response_target))
+                .or_insert_with(|| ChannelData::new(options));
+            this_channel_data.end_topic();
+            server.send(Command::PART(String::from(response_target),
+                        Some(format!("Leaving at request of {}.  Feel free to /invite me back.",
+                                     response_username.unwrap())))).unwrap();
+        } else {
+            send_line(response_username, "'bye' only works in a channel");
         }
         return;
     }
