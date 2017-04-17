@@ -198,6 +198,7 @@ fn handle_bot_command<'opts>(server: &IrcServer,
     }
 
     if command == "status" {
+        // FIXME: Give the changeset we were compiled from.
         send_line(response_username,
                   "I currently have data for the following channels:");
         let mut sorted_channels: Vec<&String> = all_channel_data.keys().collect();
@@ -288,6 +289,7 @@ impl fmt::Display for TopicData {
         if self.resolutions.len() == 0 {
             try!(write!(f,
                         "The CSS Working Group just discussed {}.\n\n",
+                        // FIXME: escape self.topic
                         self.topic));
         } else {
             try!(write!(f,
