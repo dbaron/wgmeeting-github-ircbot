@@ -373,11 +373,14 @@ impl<'opts> ChannelData<'opts> {
                     data.github_url = new_url;
                 }
 
-                if line.message.starts_with("RESOLUTION") || line.message.starts_with("RESOLVED") {
-                    data.resolutions.push(line.message.clone());
-                }
+                if !line.is_action {
+                    if line.message.starts_with("RESOLUTION") ||
+                       line.message.starts_with("RESOLVED") {
+                        data.resolutions.push(line.message.clone());
+                    }
 
-                data.lines.push(line);
+                    data.lines.push(line);
+                }
 
                 response
             }
