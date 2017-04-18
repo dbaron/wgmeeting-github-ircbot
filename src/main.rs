@@ -49,7 +49,7 @@ fn main() {
         .expect("No options property within configuration?");
 
     // FIXME: Add a way to ask the bot to reboot itself?
-    let mut channel_data: HashMap<String, ChannelData> = HashMap::new();
+    let mut irc_state = IRCState::new();
 
     for message in server.iter() {
         let message = message.unwrap(); // panic if there's an error
@@ -82,7 +82,7 @@ fn main() {
                             info!("[{}] {}", source, line);
                             handle_bot_command(&server,
                                                options,
-                                               &mut channel_data,
+                                               &mut irc_state,
                                                &line.message,
                                                source,
                                                false,
@@ -94,18 +94,14 @@ fn main() {
                                 Some(ref command) => {
                                     handle_bot_command(&server,
                                                        options,
-                                                       &mut channel_data,
+                                                       &mut irc_state,
                                                        command,
                                                        target,
                                                        line.is_action,
                                                        Some(source))
                                 }
                                 None => {
-                                    // FIXME: code duplication
-                                    let this_channel_data =
-                                        channel_data
-                                            .entry(target.clone())
-                                            .or_insert_with(|| ChannelData::new(options));
+                                    let this_channel_data = irc_state.channel_data(target, options);
                                     if let Some(response) = this_channel_data.add_line(line) {
                                         server.send_privmsg(target, &*response).unwrap();
                                     }
@@ -146,7 +142,7 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
 
 fn handle_bot_command<'opts>(server: &IrcServer,
                              options: &'opts HashMap<String, String>,
-                             all_channel_data: &mut HashMap<String, ChannelData<'opts>>,
+                             irc_state: &mut IRCState<'opts>,
                              command: &str,
                              response_target: &str,
                              response_is_action: bool,
@@ -202,10 +198,10 @@ fn handle_bot_command<'opts>(server: &IrcServer,
         // FIXME: Give the changeset we were compiled from.
         send_line(response_username,
                   "I currently have data for the following channels:");
-        let mut sorted_channels: Vec<&String> = all_channel_data.keys().collect();
+        let mut sorted_channels: Vec<&String> = irc_state.channel_data.keys().collect();
         sorted_channels.sort();
         for channel in sorted_channels {
-            let ref channel_data = all_channel_data[channel];
+            let ref channel_data = irc_state.channel_data[channel];
             if let Some(ref topic) = channel_data.current_topic {
                 send_line(None,
                           &*format!("  {} ({} lines buffered on \"{}\")",
@@ -227,10 +223,7 @@ fn handle_bot_command<'opts>(server: &IrcServer,
 
     if command == "bye" {
         if response_target.starts_with('#') {
-            // FIXME: code duplication
-            let this_channel_data = all_channel_data
-                .entry(String::from(response_target))
-                .or_insert_with(|| ChannelData::new(options));
+            let this_channel_data = irc_state.channel_data(response_target, options);
             this_channel_data.end_topic();
             server.send(Command::PART(String::from(response_target),
                         Some(format!("Leaving at request of {}.  Feel free to /invite me back.",
@@ -243,6 +236,25 @@ fn handle_bot_command<'opts>(server: &IrcServer,
 
     send_line(response_username,
               "Sorry, I don't understand that command.  Try 'help'.");
+}
+
+struct IRCState<'opts> {
+    channel_data: HashMap<String, ChannelData<'opts>>,
+}
+
+impl<'opts> IRCState<'opts> {
+    fn new() -> IRCState<'opts> {
+        IRCState { channel_data: HashMap::new() }
+    }
+
+    fn channel_data(&mut self,
+                    channel: &str,
+                    options: &'opts HashMap<String, String>)
+                    -> &mut ChannelData<'opts> {
+        self.channel_data
+            .entry(String::from(channel))
+            .or_insert_with(|| ChannelData::new(options))
+    }
 }
 
 struct ChannelLine {
