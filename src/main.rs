@@ -182,7 +182,7 @@ fn handle_bot_command<'opts>(server: &IrcServer,
         send_line(None,
                   "My job is to leave comments in github when the group discusses github issues and takes minutes in IRC.");
         send_line(None,
-                  "I separate discussions by the \"Topic:\" lines, and I know what github issues to use only by lines of the form \"GitHub topic: <url> | none\", or if the \"Topic:\" line is a github URL.");
+                  "I separate discussions by the \"Topic:\" lines, and I know what github issues to use only by lines of the form \"GitHub topic: <url> | none\".");
         send_line(None,
                   &*format!("I'm only allowed to comment on issues in the repositories: {}.",
                             options["github_repos_allowed"]));
@@ -410,15 +410,13 @@ fn extract_github_url(message: &str, options: &HashMap<String, String>) -> Optio
             .unwrap();
     }
     let ref allowed_repos = options["github_repos_allowed"];
-    for prefix in ["topic:", "github topic:"].into_iter() {
-        if let Some(ref maybe_url) = strip_ci_prefix(&message, prefix) {
-            if maybe_url.to_lowercase() == "none" {
-                return Some(None);
-            } else if let Some(ref caps) = GITHUB_URL_RE.captures(maybe_url) {
-                for repo in allowed_repos.split_whitespace() {
-                    if caps["repo"] == *repo {
-                        return Some(Some(maybe_url.clone()));
-                    }
+    if let Some(ref maybe_url) = strip_ci_prefix(&message, "github topic:") {
+        if maybe_url.to_lowercase() == "none" {
+            return Some(None);
+        } else if let Some(ref caps) = GITHUB_URL_RE.captures(maybe_url) {
+            for repo in allowed_repos.split_whitespace() {
+                if caps["repo"] == *repo {
+                    return Some(Some(maybe_url.clone()));
                 }
             }
         }
