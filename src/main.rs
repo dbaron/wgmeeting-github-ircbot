@@ -474,6 +474,20 @@ impl GithubCommentTask {
                 comments
                     .create(&CommentOptions { body: comment_text })
                     .unwrap();
+
+                if self.data.resolutions.len() > 0 {
+                    // We had resolutions, so remove the "Agenda+" and
+                    // "Agenda+ F2F" tags, if present.
+
+                    // Explicitly discard any errors.  That's because this
+                    // might give an error if the label isn't present.
+                    // FIXME:  But it might also give a (different) error if
+                    // we don't have write access to the repository, so we
+                    // really ought to distinguish, and report the latter.
+                    let labels = issue.labels();
+                    labels.remove("Agenda+").ok();
+                    labels.remove("Agenda+ F2F").ok();
+                }
             } else {
                 warn!("How does {} fail to match now when it matched before?",
                       github_url)
