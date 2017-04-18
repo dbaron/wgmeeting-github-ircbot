@@ -14,6 +14,7 @@ use std::env;
 use std::fmt;
 use std::thread;
 use std::collections::HashMap;
+use std::ascii::AsciiExt;
 use regex::Regex;
 
 use irc::client::prelude::*;
@@ -314,8 +315,12 @@ impl fmt::Display for TopicData {
 /// A case-insensitive version of starts_with.
 fn ci_starts_with(s: &str, prefix: &str) -> bool {
     assert!(prefix.to_lowercase() == prefix);
+    assert!(prefix.len() == prefix.chars().count());
 
-    s.len() >= prefix.len() && s[0..prefix.len()].to_lowercase() == prefix
+    s.len() >= prefix.len() &&
+    prefix
+        .as_bytes()
+        .eq_ignore_ascii_case(&s.as_bytes()[..prefix.len()])
 }
 
 /// Remove a case-insensitive start of the line, and if that prefix is
