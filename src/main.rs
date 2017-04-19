@@ -101,7 +101,8 @@ fn main() {
                                 }
                                 None => {
                                     let this_channel_data = irc_state.channel_data(target, options);
-                                    if let Some(response) = this_channel_data.add_line(line) {
+                                    if let Some(response) =
+                                        this_channel_data.add_line(&server, line) {
                                         send_irc_line(&server, target, true, response);
                                     }
                                 }
@@ -225,7 +226,7 @@ fn handle_bot_command<'opts>(server: &IrcServer,
     if command == "bye" {
         if response_target.starts_with('#') {
             let this_channel_data = irc_state.channel_data(response_target, options);
-            this_channel_data.end_topic();
+            this_channel_data.end_topic(server);
             server.send(Command::PART(String::from(response_target),
                         Some(format!("Leaving at request of {}.  Feel free to /invite me back.",
                                      response_username.unwrap())))).unwrap();
@@ -254,7 +255,7 @@ impl<'opts> IRCState<'opts> {
                     -> &mut ChannelData<'opts> {
         self.channel_data
             .entry(String::from(channel))
-            .or_insert_with(|| ChannelData::new(options))
+            .or_insert_with(|| ChannelData::new(channel, options))
     }
 }
 
@@ -272,6 +273,7 @@ struct TopicData {
 }
 
 struct ChannelData<'opts> {
+    channel_name: String,
     current_topic: Option<TopicData>,
     options: &'opts HashMap<String, String>,
 }
@@ -347,21 +349,22 @@ fn strip_ci_prefix(s: &str, prefix: &str) -> Option<String> {
 }
 
 impl<'opts> ChannelData<'opts> {
-    fn new(options_: &'opts HashMap<String, String>) -> ChannelData {
+    fn new(channel_name_: &str, options_: &'opts HashMap<String, String>) -> ChannelData<'opts> {
         ChannelData {
+            channel_name: String::from(channel_name_),
             current_topic: None,
             options: options_,
         }
     }
 
     // Returns the response that should be sent to the message over IRC.
-    fn add_line(&mut self, line: ChannelLine) -> Option<String> {
+    fn add_line(&mut self, server: &IrcServer, line: ChannelLine) -> Option<String> {
         if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
-            self.start_topic(topic);
+            self.start_topic(server, topic);
         }
         if line.source == "trackbot" && line.is_action == true &&
            line.message == "is ending a teleconference." {
-            self.end_topic();
+            self.end_topic(server);
         }
         match self.current_topic {
             None => None,
@@ -400,16 +403,16 @@ impl<'opts> ChannelData<'opts> {
         }
     }
 
-    fn start_topic(&mut self, topic: &str) {
-        self.end_topic();
+    fn start_topic(&mut self, server: &IrcServer, topic: &str) {
+        self.end_topic(server);
         self.current_topic = Some(TopicData::new(topic));
     }
 
-    fn end_topic(&mut self) {
+    fn end_topic(&mut self, server: &IrcServer) {
         // TODO: Test the topic boundary code.
         if let Some(topic) = self.current_topic.take() {
             if topic.github_url.is_some() {
-                let task = GithubCommentTask::new(topic, self.options);
+                let task = GithubCommentTask::new(server, &*self.channel_name, topic, self.options);
                 task.run();
             }
         }
@@ -438,18 +441,27 @@ fn extract_github_url(message: &str, options: &HashMap<String, String>) -> Optio
 }
 
 struct GithubCommentTask {
+    // a clone of the IRCServer is OK, because it reference-counts almost all of its internals
+    server: IrcServer,
+    response_target: String,
     data: TopicData,
     github: Github,
 }
 
 impl GithubCommentTask {
-    fn new(data_: TopicData, options: &HashMap<String, String>) -> GithubCommentTask {
+    fn new(server_: &IrcServer,
+           response_target_: &str,
+           data_: TopicData,
+           options: &HashMap<String, String>)
+           -> GithubCommentTask {
         let github_ =
             Github::new(&*options["github_uastring"],
                         Client::with_connector(HttpsConnector::new(NativeTlsClient::new()
                                                                        .unwrap())),
                         Credentials::Token(options["github_access_token"].clone()));
         GithubCommentTask {
+            server: server_.clone(),
+            response_target: String::from(response_target_),
             data: data_,
             github: github_,
         }
@@ -474,9 +486,7 @@ impl GithubCommentTask {
                 let comments = issue.comments();
 
                 let comment_text = format!("{}", self.data);
-                comments
-                    .create(&CommentOptions { body: comment_text })
-                    .unwrap();
+                let err = comments.create(&CommentOptions { body: comment_text });
 
                 if self.data.resolutions.len() > 0 {
                     // We had resolutions, so remove the "Agenda+" and
@@ -491,6 +501,15 @@ impl GithubCommentTask {
                     labels.remove("Agenda+").ok();
                     labels.remove("Agenda+ F2F").ok();
                 }
+
+                let response = format!("{} on {}",
+                                       if err.is_ok() {
+                                           "Successfully commented"
+                                       } else {
+                                           "UNABLE TO COMMENT"
+                                       },
+                                       github_url);
+                send_irc_line(&self.server, &*self.response_target, true, response);
             } else {
                 warn!("How does {} fail to match now when it matched before?",
                       github_url)

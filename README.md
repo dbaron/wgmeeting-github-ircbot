@@ -23,7 +23,7 @@ My previous notes:
 * [X] "Topic github: &lt;url>" or just "Topic: &lt;github-url>"
     * [X] acknowledge this
 * [X] split on "Topic:" and "trackbot, end meeting"
-    * [ ] acknowledge again after making comment
+    * [X] acknowledge again after making comment
 * [X] answer help command asked explicitly
 * [X] answer other requests asked explicitly
 * [ ] answer PMs saying need to be in channel
