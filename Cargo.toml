@@ -2,6 +2,7 @@
 name = "wgmeeting_github_ircbot"
 version = "0.1.0"
 authors = ["L. David Baron <dbaron@dbaron.org>"]
+build = "build.rs"
 
 [dependencies]
 log = "0.3.7"

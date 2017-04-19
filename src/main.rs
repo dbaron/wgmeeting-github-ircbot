@@ -199,7 +199,11 @@ fn handle_bot_command<'opts>(server: &IrcServer,
     if command == "status" {
         // FIXME: Give the changeset we were compiled from.
         send_line(response_username,
-                  "I currently have data for the following channels:");
+                  &*format!("This is {} version {}, compiled from {} which is probably in the repository at https://github.com/dbaron/wgmeeting-github-ircbot/",
+                            env!("CARGO_PKG_NAME"),
+                            env!("CARGO_PKG_VERSION"),
+                            include_str!(concat!(env!("OUT_DIR"), "/git-hash"))));
+        send_line(None, "I currently have data for the following channels:");
         let mut sorted_channels: Vec<&String> = irc_state.channel_data.keys().collect();
         sorted_channels.sort();
         for channel in sorted_channels {
