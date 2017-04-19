@@ -1,7 +1,7 @@
 {
   "owners": [ "dbaron" ],
-  "nickname": "minute-man",
-  "alt_nicks": ["minute-man-", "minute-man--"],
+  "nickname": "github-bot",
+  "alt_nicks": ["github-bot-", "github-bot--"],
   "username": "dbaron-gh-bot",
   "realname": "Bot to add meeting minutes to github issues.",
   "server": "irc.w3.org",
