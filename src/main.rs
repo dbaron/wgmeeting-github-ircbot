@@ -333,8 +333,8 @@ impl fmt::Display for TopicData {
 
 /// A case-insensitive version of starts_with.
 fn ci_starts_with(s: &str, prefix: &str) -> bool {
-    assert!(prefix.to_lowercase() == prefix);
-    assert!(prefix.len() == prefix.chars().count());
+    debug_assert!(prefix.to_lowercase() == prefix);
+    debug_assert!(prefix.len() == prefix.chars().count());
 
     s.len() >= prefix.len() &&
     prefix
