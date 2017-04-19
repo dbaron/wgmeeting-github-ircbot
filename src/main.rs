@@ -487,6 +487,13 @@ impl GithubCommentTask {
 
                 let comment_text = format!("{}", self.data);
                 let err = comments.create(&CommentOptions { body: comment_text });
+                let mut response = format!("{} on {}",
+                                           if err.is_ok() {
+                                               "Successfully commented"
+                                           } else {
+                                               "UNABLE TO COMMENT"
+                                           },
+                                           github_url);
 
                 if self.data.resolutions.len() > 0 {
                     // We had resolutions, so remove the "Agenda+" and
@@ -498,17 +505,13 @@ impl GithubCommentTask {
                     // we don't have write access to the repository, so we
                     // really ought to distinguish, and report the latter.
                     let labels = issue.labels();
-                    labels.remove("Agenda+").ok();
-                    labels.remove("Agenda+ F2F").ok();
+                    for label in ["Agenda+", "Agenda+ F2F"].into_iter() {
+                        if labels.remove(label).is_ok() {
+                            response.push_str(&*format!(" and removed the \"{}\" label", label));
+                        }
+                    }
                 }
 
-                let response = format!("{} on {}",
-                                       if err.is_ok() {
-                                           "Successfully commented"
-                                       } else {
-                                           "UNABLE TO COMMENT"
-                                       },
-                                       github_url);
                 send_irc_line(&self.server, &*self.response_target, true, response);
             } else {
                 warn!("How does {} fail to match now when it matched before?",
