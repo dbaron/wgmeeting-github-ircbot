@@ -8,7 +8,6 @@ extern crate regex;
 extern crate hyper;
 extern crate hubcaps;
 extern crate hyper_native_tls;
-extern crate serde_json;
 
 use std::env;
 use std::fmt;
