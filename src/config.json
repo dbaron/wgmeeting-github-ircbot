@@ -12,7 +12,7 @@
   "user_info": "Bot to add meeting minutes to github issues.",
   "options": {
     "source": "https://github.com/dbaron/wgmeeting-github-ircbot",
-    "github_repos_allowed": "w3c/csswg-drafts w3c/fxtf-drafts w3c/css-houdini-drafts",
+    "github_repos_allowed": "w3c/csswg-drafts w3c/fxtf-drafts w3c/css-houdini-drafts w3c/svgwg w3c/web-platform-tests",
     "github_access_token": "<ACCESS TOKEN HERE>",
     "github_uastring": "wgmeeting-github-ircbot/0.1.0"
   }
