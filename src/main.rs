@@ -102,7 +102,7 @@ fn main() {
                                 None => {
                                     let this_channel_data = irc_state.channel_data(target, options);
                                     if let Some(response) = this_channel_data.add_line(line) {
-                                        server.send_privmsg(target, &*response).unwrap();
+                                        send_irc_line(&server, target, true, response);
                                     }
                                 }
                             }
@@ -139,6 +139,15 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
     Some(String::from(after_punct.trim_left()))
 }
 
+fn send_irc_line(server: &IrcServer, target: &str, is_action: bool, line: String) {
+    let adjusted_line = if is_action {
+        format!("\x01ACTION {}\x01", line)
+    } else {
+        line
+    };
+    server.send_privmsg(target, &*adjusted_line).unwrap();
+}
+
 fn handle_bot_command<'opts>(server: &IrcServer,
                              options: &'opts HashMap<String, String>,
                              irc_state: &mut IRCState<'opts>,
@@ -152,14 +161,7 @@ fn handle_bot_command<'opts>(server: &IrcServer,
             None => String::from(line),
             Some(username) => String::from(username) + ", " + line,
         };
-        let adjusted_line = if response_is_action {
-            format!("\x01ACTION {}\x01", line_with_nick)
-        } else {
-            line_with_nick
-        };
-        server
-            .send_privmsg(response_target, &adjusted_line)
-            .unwrap();
+        send_irc_line(server, response_target, response_is_action, line_with_nick);
     };
 
     if command == "help" {
