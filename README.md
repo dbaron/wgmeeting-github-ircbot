@@ -25,3 +25,10 @@ Put the github API key in ./src/config.json and then do one of:
 
     RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run --release ./src/config.json
     RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run ./src/config-dev.json
+
+# Acknowledgments
+
+Thanks to Xidorn Quan and Alan Stearns for feature suggestions, and to
+Manish Goregaokar, Simon Sapin, Jack Moffitt, and Till Schneidereit for
+answering my questions about Rust while I was trying to learn Rust while
+writing this.
