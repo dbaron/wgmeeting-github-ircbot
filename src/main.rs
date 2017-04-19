@@ -453,9 +453,11 @@ impl GithubCommentTask {
             github: github_,
         }
     }
+
     fn run(self) {
         thread::spawn(move || { self.main(); });
     }
+
     fn main(&self) {
         lazy_static! {
             static ref GITHUB_URL_RE: Regex =
