@@ -352,6 +352,17 @@ fn strip_ci_prefix(s: &str, prefix: &str) -> Option<String> {
     }
 }
 
+/// Remove a case-insensitive start of the line (given multiple options
+/// for what that start is), and if that prefix is present return the
+/// rest of the line.
+fn strip_one_ci_prefix<'a, T>(s: &str, prefixes: T) -> Option<String>
+    where T: Iterator<Item = &'a &'a str>
+{
+    prefixes
+        .filter_map(|prefix| strip_ci_prefix(s, &prefix))
+        .next()
+}
+
 impl<'opts> ChannelData<'opts> {
     fn new(channel_name_: &str, options_: &'opts HashMap<String, String>) -> ChannelData<'opts> {
         ChannelData {
@@ -443,7 +454,8 @@ fn extract_github_url(message: &str,
             .unwrap();
     }
     let ref allowed_repos = options["github_repos_allowed"];
-    if let Some(ref maybe_url) = strip_ci_prefix(&message, "github topic:") {
+    if let Some(ref maybe_url) =
+        strip_one_ci_prefix(&message, ["github topic:", "github issue:"].into_iter()) {
         if maybe_url.to_lowercase() == "none" {
             (Some(None), None)
         } else if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
@@ -467,7 +479,7 @@ fn extract_github_url(message: &str,
                 (None, None)
             } else {
                 (None,
-                 Some(String::from("Because I don't want to spam github issues unnecessarily, I won't comment in that github issue unless you write \"Github topic: <issue-url> | none\"")))
+                 Some(String::from("Because I don't want to spam github issues unnecessarily, I won't comment in that github issue unless you write \"Github topic: <issue-url> | none\" (or \"Github issue: ...\")")))
             }
         } else {
             (None, None)
