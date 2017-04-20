@@ -373,8 +373,8 @@ impl<'opts> ChannelData<'opts> {
         match self.current_topic {
             None => None,
             Some(ref mut data) => {
-                let (new_url_option, extract_failure_response) = extract_github_url(&line.message,
-                                                                                    self.options);
+                let (new_url_option, extract_failure_response) =
+                    extract_github_url(&line.message, self.options, &data.github_url);
                 let response = match (new_url_option.as_ref(), &data.github_url) {
                     (None, _) => extract_failure_response,
                     (Some(&None), &None) => None,
@@ -431,7 +431,8 @@ impl<'opts> ChannelData<'opts> {
 ///  * the second item being a response to send over IRC, if needed, which
 ///    will only be present if the first item is None
 fn extract_github_url(message: &str,
-                      options: &HashMap<String, String>)
+                      options: &HashMap<String, String>,
+                      current_github_url: &Option<String>)
                       -> (Option<Option<String>>, Option<String>) {
     lazy_static! {
         static ref GITHUB_URL_WHOLE_RE: Regex =
@@ -461,10 +462,13 @@ fn extract_github_url(message: &str,
              Some(String::from("I can't comment on that because it doesn't look like a github issue to me.")))
         }
     } else {
-        if GITHUB_URL_PART_RE.is_match(message) {
-            // FIXME: Don't send this message if the URL is the current github URL!
-            (None,
-             Some(String::from("Because I don't want to spam github issues unnecessarily, I won't comment in that github issue unless you write \"Github topic: <issue-url> | none\"")))
+        if let Some(ref rematch) = GITHUB_URL_PART_RE.find(message) {
+            if &Some(String::from(rematch.as_str())) == current_github_url {
+                (None, None)
+            } else {
+                (None,
+                 Some(String::from("Because I don't want to spam github issues unnecessarily, I won't comment in that github issue unless you write \"Github topic: <issue-url> | none\"")))
+            }
         } else {
             (None, None)
         }
