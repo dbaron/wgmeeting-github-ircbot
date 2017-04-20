@@ -398,13 +398,13 @@ impl<'opts> ChannelData<'opts> {
                 let response = match (new_url_option.as_ref(), &data.github_url) {
                     (None, _) => extract_failure_response,
                     (Some(&None), &None) => None,
-                    (Some(&None), _) => Some(String::from("OK, I won't post this discussion to GitHub")),
+                    (Some(&None), _) => Some(String::from("OK, I won't post this discussion to GitHub.")),
                     (Some(&Some(ref new_url)), &None) => {
-                        Some(format!("OK, I'll post this discussion to {}", new_url))
+                        Some(format!("OK, I'll post this discussion to {}.", new_url))
                     }
                     (Some(new_url), old_url) if *old_url == *new_url => None,
                     (Some(&Some(ref new_url)), &Some(ref old_url)) => {
-                        Some(format!("OK, I'll post this discussion to {} instead of {} like you said before",
+                        Some(format!("OK, I'll post this discussion to {} instead of {} like you said before.",
                                      new_url,
                                      old_url))
                     }
@@ -488,7 +488,7 @@ fn extract_github_url(message: &str,
                 (None, None)
             } else {
                 (None,
-                 Some(String::from("Because I don't want to spam github issues unnecessarily, I won't comment in that github issue unless you write \"Github topic: <issue-url> | none\" (or \"Github issue: ...\")")))
+                 Some(String::from("Because I don't want to spam github issues unnecessarily, I won't comment in that github issue unless you write \"Github topic: <issue-url> | none\" (or \"Github issue: ...\").")))
             }
         } else {
             (None, None)
