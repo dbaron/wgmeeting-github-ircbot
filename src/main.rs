@@ -398,6 +398,7 @@ impl<'opts> ChannelData<'opts> {
                         Some(String::from("I can't set a github URL because you haven't started a topic.  Also, ") +
                              extract_response)
                     }
+                    (None, None) => None,
                     _ => panic!("unexpected state"),
                 }
             }
