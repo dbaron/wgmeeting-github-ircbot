@@ -314,17 +314,18 @@ impl TopicData {
 
 impl fmt::Display for TopicData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Use `...` around the topic and resolutions, and ```-escaping around
+        // the IRC log to avoid most concern about escaping.
         if self.resolutions.len() == 0 {
             try!(write!(f,
-                        "The CSS Working Group just discussed {}.\n\n",
-                        // FIXME: escape self.topic
+                        "The CSS Working Group just discussed `{}`.\n\n",
                         self.topic));
         } else {
             try!(write!(f,
-                        "The CSS Working Group just discussed {}, and agreed to the following resolutions:\n\n",
+                        "The CSS Working Group just discussed `{}`, and agreed to the following resolutions:\n\n",
                         self.topic));
             for resolution in &self.resolutions {
-                try!(write!(f, "```\n{}\n```\n\n", resolution));
+                try!(write!(f, "* `\n{}\n`\n\n", resolution));
             }
         }
 
