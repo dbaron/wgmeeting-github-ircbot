@@ -318,19 +318,19 @@ impl fmt::Display for TopicData {
         // the IRC log to avoid most concern about escaping.
         if self.resolutions.len() == 0 {
             try!(write!(f,
-                        "The CSS Working Group just discussed `{}`.\n\n",
+                        "The CSS Working Group just discussed `{}`.\n",
                         self.topic));
         } else {
             try!(write!(f,
                         "The CSS Working Group just discussed `{}`, and agreed to the following resolutions:\n\n",
                         self.topic));
             for resolution in &self.resolutions {
-                try!(write!(f, "* `\n{}\n`\n\n", resolution));
+                try!(write!(f, "* `{}`\n", resolution));
             }
         }
 
         try!(write!(f,
-                    "<details><summary>The full IRC log of that discussion</summary>\n"));
+                    "\n<details><summary>The full IRC log of that discussion</summary>\n"));
         try!(write!(f, "\n```\n"));
         for line in &self.lines {
             try!(write!(f, "{}\n", line));
