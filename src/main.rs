@@ -66,13 +66,13 @@ fn main() {
                             ChannelLine {
                                 source: source_,
                                 is_action: true,
-                                message: String::from(&msg[8..msg.len() - 1]),
+                                message: filter_bot_hidden(&msg[8..msg.len() - 1]),
                             }
                         } else {
                             ChannelLine {
                                 source: source_,
                                 is_action: false,
-                                message: msg.clone(),
+                                message: filter_bot_hidden(msg),
                             }
                         };
                         let mynick = server.current_nickname();
@@ -123,6 +123,15 @@ fn main() {
             }
             _ => (),
         }
+    }
+}
+
+/// Remove anything in a line that is after [off] to prevent it from being
+/// logged, to match the convention of other W3C logging bots.
+fn filter_bot_hidden(line: &str) -> String {
+    match line.find("[off]") {
+        None => String::from(line),
+        Some(index) => String::from(&line[..index]) + "[hidden]",
     }
 }
 
