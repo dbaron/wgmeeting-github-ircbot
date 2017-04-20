@@ -382,7 +382,16 @@ impl<'opts> ChannelData<'opts> {
             self.end_topic(server);
         }
         match self.current_topic {
-            None => None,
+            None => {
+                match extract_github_url(&line.message, self.options, &None) {
+                    (Some(_), None) => Some(String::from("I can't set a github URL because you haven't started a topic.")),
+                    (None, Some(ref extract_response)) => {
+                        Some(String::from("I can't set a github URL because you haven't started a topic.  Also, ") +
+                             extract_response)
+                    }
+                    _ => panic!("unexpected state"),
+                }
+            }
             Some(ref mut data) => {
                 let (new_url_option, extract_failure_response) =
                     extract_github_url(&line.message, self.options, &data.github_url);
