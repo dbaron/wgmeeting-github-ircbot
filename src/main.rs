@@ -206,7 +206,6 @@ fn handle_bot_command<'opts>(server: &IrcServer,
     }
 
     if command == "status" {
-        // FIXME: Give the changeset we were compiled from.
         send_line(response_username,
                   &*format!("This is {} version {}, compiled from {} which is probably in the repository at https://github.com/dbaron/wgmeeting-github-ircbot/",
                             env!("CARGO_PKG_NAME"),
