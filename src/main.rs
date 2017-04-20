@@ -373,9 +373,10 @@ impl<'opts> ChannelData<'opts> {
         match self.current_topic {
             None => None,
             Some(ref mut data) => {
-                let new_url_option = extract_github_url(&line.message, self.options);
+                let (new_url_option, extract_failure_response) = extract_github_url(&line.message,
+                                                                                    self.options);
                 let response = match (new_url_option.as_ref(), &data.github_url) {
-                    (None, _) => None,
+                    (None, _) => extract_failure_response,
                     (Some(&None), &None) => None,
                     (Some(&None), _) => Some(String::from("OK, I won't post this discussion to GitHub")),
                     (Some(&Some(ref new_url)), &None) => {
@@ -423,25 +424,51 @@ impl<'opts> ChannelData<'opts> {
     }
 }
 
-fn extract_github_url(message: &str, options: &HashMap<String, String>) -> Option<Option<String>> {
+/// Return a pair where:
+///  * the first item is a nested option, the outer option representing
+///    whether to replace the current github URL, and the inner option
+///    being part of that URL (so that we can replace to no-url)
+///  * the second item being a response to send over IRC, if needed, which
+///    will only be present if the first item is None
+fn extract_github_url(message: &str,
+                      options: &HashMap<String, String>)
+                      -> (Option<Option<String>>, Option<String>) {
     lazy_static! {
-        static ref GITHUB_URL_RE: Regex =
+        static ref GITHUB_URL_WHOLE_RE: Regex =
             Regex::new(r"^https://github.com/(?P<repo>[^/]*/[^/]*)/issues/(?P<number>[0-9]+)$")
+            .unwrap();
+        static ref GITHUB_URL_PART_RE: Regex =
+            Regex::new(r"https://github.com/(?P<repo>[^/]*/[^/]*)/issues/(?P<number>[0-9]+)")
             .unwrap();
     }
     let ref allowed_repos = options["github_repos_allowed"];
     if let Some(ref maybe_url) = strip_ci_prefix(&message, "github topic:") {
         if maybe_url.to_lowercase() == "none" {
-            return Some(None);
-        } else if let Some(ref caps) = GITHUB_URL_RE.captures(maybe_url) {
-            for repo in allowed_repos.split_whitespace() {
-                if caps["repo"] == *repo {
-                    return Some(Some(maybe_url.clone()));
-                }
+            (Some(None), None)
+        } else if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
+            if allowed_repos
+                   .split_whitespace()
+                   .collect::<Vec<&str>>()
+                   .contains(&&caps["repo"]) {
+                (Some(Some(maybe_url.clone())), None)
+            } else {
+                (None,
+                 Some(format!("I can't comment on that github issue because it's not in a repository I'm allowed to comment on, which are: {}.",
+                              allowed_repos)))
             }
+        } else {
+            (None,
+             Some(String::from("I can't comment on that because it doesn't look like a github issue to me.")))
+        }
+    } else {
+        if GITHUB_URL_PART_RE.is_match(message) {
+            // FIXME: Don't send this message if the URL is the current github URL!
+            (None,
+             Some(String::from("Because I don't want to spam github issues unnecessarily, I won't comment in that github issue unless you write \"Github topic: <issue-url> | none\"")))
+        } else {
+            (None, None)
         }
     }
-    None
 }
 
 struct GithubCommentTask {
