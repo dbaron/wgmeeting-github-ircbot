@@ -192,95 +192,89 @@ fn handle_bot_command<'opts>(server: &IrcServer,
         send_irc_line(server, response_target, response_is_action, line_with_nick);
     };
 
-    if command == "help" {
-        send_line(response_username, "The commands I understand are:");
-        send_line(None, "  help      - Send this message.");
-        send_line(None, "  intro     - Send a message describing what I do.");
-        send_line(None,
-                  "  status    - Send a message with current bot status.");
-        send_line(None,
-                  "  bye       - Leave the channel.  (You can /invite me back.)");
-        send_line(None,
-                  "  end topic - End the current topic without starting a new one.");
-        return;
-    }
-
-    if command == "intro" {
-        let config = server.config();
-        send_line(None,
-                  "My job is to leave comments in github when the group discusses github issues and takes minutes in IRC.");
-        send_line(None,
-                  "I separate discussions by the \"Topic:\" lines, and I know what github issues to use only by lines of the form \"GitHub topic: <url> | none\".");
-        send_line(None,
-                  &*format!("I'm only allowed to comment on issues in the repositories: {}.",
-                            options["github_repos_allowed"]));
-        let owners = if let Some(v) = config.owners.as_ref() {
-            v.join(" ")
-        } else {
-            String::from("")
-        };
-        send_line(None,
-                  &*format!("My source code is at {} and I'm run by {}.",
-                            options["source"],
-                            owners));
-        return;
-    }
-
-    if command == "status" {
-        send_line(response_username,
-                  &*format!("This is {} version {}, compiled from {} which is probably in the repository at https://github.com/dbaron/wgmeeting-github-ircbot/",
-                            env!("CARGO_PKG_NAME"),
-                            env!("CARGO_PKG_VERSION"),
-                            include_str!(concat!(env!("OUT_DIR"), "/git-hash"))));
-        send_line(None, "I currently have data for the following channels:");
-        let mut sorted_channels: Vec<&String> = irc_state.channel_data.keys().collect();
-        sorted_channels.sort();
-        for channel in sorted_channels {
-            let ref channel_data = irc_state.channel_data[channel];
-            if let Some(ref topic) = channel_data.current_topic {
-                send_line(None,
-                          &*format!("  {} ({} lines buffered on \"{}\")",
-                                    channel,
-                                    topic.lines.len(),
-                                    topic.topic));
-                match topic.github_url {
-                    None => send_line(None, "    no GitHub URL to comment on"),
-                    Some(ref github_url) => {
-                        send_line(None, &*format!("    will comment on {}", github_url))
-                    }
-                };
+    match command {
+        "help" => {
+            send_line(response_username, "The commands I understand are:");
+            send_line(None, "  help      - Send this message.");
+            send_line(None, "  intro     - Send a message describing what I do.");
+            send_line(None,
+                      "  status    - Send a message with current bot status.");
+            send_line(None,
+                      "  bye       - Leave the channel.  (You can /invite me back.)");
+            send_line(None,
+                      "  end topic - End the current topic without starting a new one.");
+        }
+        "intro" => {
+            let config = server.config();
+            send_line(None,
+                      "My job is to leave comments in github when the group discusses github issues and takes minutes in IRC.");
+            send_line(None,
+                      "I separate discussions by the \"Topic:\" lines, and I know what github issues to use only by lines of the form \"GitHub topic: <url> | none\".");
+            send_line(None,
+                      &*format!("I'm only allowed to comment on issues in the repositories: {}.",
+                                options["github_repos_allowed"]));
+            let owners = if let Some(v) = config.owners.as_ref() {
+                v.join(" ")
             } else {
-                send_line(None, &*format!("  {} (no topic data buffered)", channel));
+                String::from("")
+            };
+            send_line(None,
+                      &*format!("My source code is at {} and I'm run by {}.",
+                                options["source"],
+                                owners));
+        }
+        "status" => {
+            send_line(response_username,
+                      &*format!("This is {} version {}, compiled from {} which is probably in the repository at https://github.com/dbaron/wgmeeting-github-ircbot/",
+                                env!("CARGO_PKG_NAME"),
+                                env!("CARGO_PKG_VERSION"),
+                                include_str!(concat!(env!("OUT_DIR"), "/git-hash"))));
+            send_line(None, "I currently have data for the following channels:");
+            let mut sorted_channels: Vec<&String> = irc_state.channel_data.keys().collect();
+            sorted_channels.sort();
+            for channel in sorted_channels {
+                let ref channel_data = irc_state.channel_data[channel];
+                if let Some(ref topic) = channel_data.current_topic {
+                    send_line(None,
+                              &*format!("  {} ({} lines buffered on \"{}\")",
+                                        channel,
+                                        topic.lines.len(),
+                                        topic.topic));
+                    match topic.github_url {
+                        None => send_line(None, "    no GitHub URL to comment on"),
+                        Some(ref github_url) => {
+                            send_line(None, &*format!("    will comment on {}", github_url))
+                        }
+                    };
+                } else {
+                    send_line(None, &*format!("  {} (no topic data buffered)", channel));
+                }
             }
         }
-        return;
-    }
-
-    if command == "bye" {
-        if response_target.starts_with('#') {
-            let this_channel_data = irc_state.channel_data(response_target, options);
-            this_channel_data.end_topic(server);
-            server.send(Command::PART(String::from(response_target),
+        "bye" => {
+            if response_target.starts_with('#') {
+                let this_channel_data = irc_state.channel_data(response_target, options);
+                this_channel_data.end_topic(server);
+                server.send(Command::PART(String::from(response_target),
                         Some(format!("Leaving at request of {}.  Feel free to /invite me back.",
                                      response_username.unwrap())))).unwrap();
-        } else {
-            send_line(response_username, "'bye' only works in a channel");
+            } else {
+                send_line(response_username, "'bye' only works in a channel");
+            }
         }
-        return;
-    }
-
-    if command == "end topic" {
-        if response_target.starts_with('#') {
-            let this_channel_data = irc_state.channel_data(response_target, options);
-            this_channel_data.end_topic(server);
-        } else {
-            send_line(response_username, "'end topic' only works in a channel");
+        "end topic" => {
+            if response_target.starts_with('#') {
+                let this_channel_data = irc_state.channel_data(response_target, options);
+                this_channel_data.end_topic(server);
+            } else {
+                send_line(response_username, "'end topic' only works in a channel");
+            }
         }
-        return;
+        _ => {
+            send_line(response_username,
+                      "Sorry, I don't understand that command.  Try 'help'.");
+        }
     }
-
-    send_line(response_username,
-              "Sorry, I don't understand that command.  Try 'help'.");
 }
 
 struct IRCState<'opts> {
