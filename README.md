@@ -12,8 +12,9 @@ based on "Topic:" and start/end of meeting, and then if somebody writes
 (changeable/cancellable also with acknowledgment), it will acknowledge
 it and then when the topic concludes, make a github comment in that
 issue at the end of the topic with the resolutions, and a &lt;details>
-with the full IRC log, or something like that.  I'll probably also teach
-it to understand "Topic:" itself being a github URL.
+with the full IRC log, or something like that.  (Understanding "Topic:"
+itself being a github URL turned out badly because of multiple people
+entering the same topic leading to multiple short or empty comments.)
 
 (Ideally it will also understand ScribeNick: and the other
 scribe.perl conventions, but that's past minimum-viable-product, I
