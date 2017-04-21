@@ -312,6 +312,12 @@ impl TopicData {
     }
 }
 
+fn replace_backticks(s: &str) -> String {
+    // Replace backticks with a similar character to avoid breaking the
+    // github single-line escaping that we do in backticks.
+    s.replace("`", "‛")
+}
+
 impl fmt::Display for TopicData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Use `...` around the topic and resolutions, and ```-escaping around
@@ -319,13 +325,13 @@ impl fmt::Display for TopicData {
         if self.resolutions.len() == 0 {
             try!(write!(f,
                         "The CSS Working Group just discussed `{}`.\n",
-                        self.topic));
+                        replace_backticks(&*self.topic)));
         } else {
             try!(write!(f,
                         "The CSS Working Group just discussed `{}`, and agreed to the following resolutions:\n\n",
-                        self.topic));
+                        replace_backticks(&*self.topic)));
             for resolution in &self.resolutions {
-                try!(write!(f, "* `{}`\n", resolution));
+                try!(write!(f, "* `{}`\n", replace_backticks(&*resolution)));
             }
         }
 
