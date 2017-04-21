@@ -9,6 +9,7 @@ extern crate hyper;
 extern crate hubcaps;
 extern crate hyper_native_tls;
 
+use std::cmp;
 use std::env;
 use std::fmt;
 use std::thread;
@@ -329,10 +330,42 @@ impl TopicData {
     }
 }
 
-fn replace_backticks(s: &str) -> String {
-    // Replace backticks with a similar character to avoid breaking the
-    // github single-line escaping that we do in backticks.
-    s.replace("`", "‛")
+/// https://github.github.com/gfm/#code-spans describes how code spans can
+/// be escaped with any number of ` characters.  This function attempts to
+/// use as few as possibly by finding the maximum sequence of ` characters
+/// in the text that we want to escape, and then surrounding the text by
+/// one more than that number of characters.
+fn escape_as_code_span(s: &str) -> String {
+    // // This is simpler but potentially O(N^2), but only if people type lots of backticks.
+    // let tick_count = (1..).find(|n| !s.contains("`".repeat(n)));
+
+    // Note: max doesn't include cur.
+    let (cur, max) = s.chars()
+        .fold((0, 0), |(cur, max), char| if char == '`' {
+            (cur + 1, max)
+        } else {
+            (0, cmp::max(cur, max))
+        });
+    let tick_count = cmp::max(cur, max) + 1;
+
+    let tick_string = "`".repeat(tick_count);
+    let backtick_byte = "`".as_bytes().first();
+    let space_first = if s.as_bytes().first() == backtick_byte {
+        " "
+    } else {
+        ""
+    };
+    let space_last = if s.as_bytes().last() == backtick_byte {
+        " "
+    } else {
+        ""
+    };
+    format!("{}{}{}{}{}",
+            tick_string,
+            space_first,
+            s,
+            space_last,
+            tick_string)
 }
 
 impl fmt::Display for TopicData {
@@ -341,14 +374,14 @@ impl fmt::Display for TopicData {
         // the IRC log to avoid most concern about escaping.
         if self.resolutions.len() == 0 {
             try!(write!(f,
-                        "The CSS Working Group just discussed `{}`.\n",
-                        replace_backticks(&*self.topic)));
+                        "The CSS Working Group just discussed {}.\n",
+                        escape_as_code_span(&*self.topic)));
         } else {
             try!(write!(f,
-                        "The CSS Working Group just discussed `{}`, and agreed to the following resolutions:\n\n",
-                        replace_backticks(&*self.topic)));
+                        "The CSS Working Group just discussed {}, and agreed to the following resolutions:\n\n",
+                        escape_as_code_span(&*self.topic)));
             for resolution in &self.resolutions {
-                try!(write!(f, "* `{}`\n", replace_backticks(&*resolution)));
+                try!(write!(f, "* {}\n", escape_as_code_span(&*resolution)));
             }
         }
 
