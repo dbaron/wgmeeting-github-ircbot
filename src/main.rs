@@ -138,6 +138,8 @@ fn filter_bot_hidden(line: &str) -> String {
     }
 }
 
+// Is this message either case-insensitively "Present+" or something that
+// begins with "Present+ " (with space)?
 fn is_present_plus(line: &str) -> bool {
     let bytes = line.as_bytes();
     let present_plus = "present+".as_bytes();
