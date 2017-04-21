@@ -100,10 +100,13 @@ fn main() {
                                                        Some(source))
                                 }
                                 None => {
-                                    let this_channel_data = irc_state.channel_data(target, options);
-                                    if let Some(response) =
-                                        this_channel_data.add_line(&server, line) {
-                                        send_irc_line(&server, target, true, response);
+                                    if !is_present_plus(&*line.message) {
+                                        let this_channel_data =
+                                            irc_state.channel_data(target, options);
+                                        if let Some(response) = this_channel_data
+                                               .add_line(&server, line) {
+                                            send_irc_line(&server, target, true, response);
+                                        }
                                     }
                                 }
                             }
@@ -132,6 +135,18 @@ fn filter_bot_hidden(line: &str) -> String {
     match line.find("[off]") {
         None => String::from(line),
         Some(index) => String::from(&line[..index]) + "[hidden]",
+    }
+}
+
+fn is_present_plus(line: &str) -> bool {
+    let bytes = line.as_bytes();
+    let present_plus = "present+".as_bytes();
+    match bytes.len().cmp(&present_plus.len()) {
+        std::cmp::Ordering::Less => false,
+        std::cmp::Ordering::Equal => bytes.eq_ignore_ascii_case(present_plus),
+        std::cmp::Ordering::Greater => {
+            bytes[..present_plus.len() + 1].eq_ignore_ascii_case("present+ ".as_bytes())
+        }
     }
 }
 
