@@ -368,6 +368,10 @@ fn escape_as_code_span(s: &str) -> String {
             tick_string)
 }
 
+fn escape_for_html_block(s: &str) -> String {
+    s.replace("&", "&amp;").replace("<", "&lt;")
+}
+
 impl fmt::Display for TopicData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Use `...` around the topic and resolutions, and ```-escaping around
@@ -387,11 +391,10 @@ impl fmt::Display for TopicData {
 
         try!(write!(f,
                     "\n<details><summary>The full IRC log of that discussion</summary>\n"));
-        try!(write!(f, "\n```\n"));
         for line in &self.lines {
-            try!(write!(f, "{}\n", line));
+            try!(write!(f, "{}<br>\n", escape_for_html_block(&*format!("{}", line))));
         }
-        try!(write!(f, "```\n</details>\n"));
+        try!(write!(f, "</details>\n"));
         Ok(())
     }
 }
