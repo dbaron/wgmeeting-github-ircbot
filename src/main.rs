@@ -194,11 +194,14 @@ fn handle_bot_command<'opts>(server: &IrcServer,
 
     if command == "help" {
         send_line(response_username, "The commands I understand are:");
-        send_line(None, "  help     Send this message.");
-        send_line(None, "  intro    Send a message describing what I do.");
-        send_line(None, "  status   Send a message with current bot status.");
+        send_line(None, "  help      - Send this message.");
+        send_line(None, "  intro     - Send a message describing what I do.");
         send_line(None,
-                  "  bye      Leave the channel.  (You can /invite me back.)");
+                  "  status    - Send a message with current bot status.");
+        send_line(None,
+                  "  bye       - Leave the channel.  (You can /invite me back.)");
+        send_line(None,
+                  "  end topic - End the current topic without starting a new one.");
         return;
     }
 
@@ -262,6 +265,16 @@ fn handle_bot_command<'opts>(server: &IrcServer,
                                      response_username.unwrap())))).unwrap();
         } else {
             send_line(response_username, "'bye' only works in a channel");
+        }
+        return;
+    }
+
+    if command == "end topic" {
+        if response_target.starts_with('#') {
+            let this_channel_data = irc_state.channel_data(response_target, options);
+            this_channel_data.end_topic(server);
+        } else {
+            send_line(response_username, "'end topic' only works in a channel");
         }
         return;
     }
