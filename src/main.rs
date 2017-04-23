@@ -192,7 +192,14 @@ fn handle_bot_command<'opts>(server: &IrcServer,
         send_irc_line(server, response_target, response_is_action, line_with_nick);
     };
 
-    match command {
+    // Remove a question mark at the end of the command if it exists
+    let command_without_question_mark = if command.ends_with("?") {
+        &command[..command.len() - 1]
+    } else {
+        command
+    };
+
+    match command_without_question_mark {
         "help" => {
             send_line(response_username, "The commands I understand are:");
             send_line(None, "  help      - Send this message.");
