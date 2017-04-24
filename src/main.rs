@@ -761,3 +761,47 @@ impl GithubCommentTask {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_present_plus() {
+        assert_eq!(is_present_plus("present+"), true);
+        assert_eq!(is_present_plus("Present+"), true);
+        assert_eq!(is_present_plus("prESeNT+"), true);
+        assert_eq!(is_present_plus("present+dbaron"), false);
+        assert_eq!(is_present_plus("say present+"), false);
+        assert_eq!(is_present_plus("preSEnt+ dbaron"), true);
+    }
+
+    #[test]
+    fn test_strip_ci_prefix() {
+        assert_eq!(strip_ci_prefix("Topic:hello", "topic:"),
+                   Some(String::from("hello")));
+        assert_eq!(strip_ci_prefix("Topic: hello", "topic:"),
+                   Some(String::from("hello")));
+        assert_eq!(strip_ci_prefix("topic: hello", "topic:"),
+                   Some(String::from("hello")));
+        assert_eq!(strip_ci_prefix("Issue: hello", "topic:"), None);
+        assert_eq!(strip_ci_prefix("Topic: hello", "issue:"), None);
+        assert_eq!(strip_ci_prefix("Github topic: hello", "topic:"), None);
+    }
+
+    #[test]
+    fn test_strip_one_ci_prefix() {
+        assert_eq!(strip_one_ci_prefix("GitHub:url goes here",
+                                       ["issue:", "github:"].into_iter()),
+                   Some(String::from("url goes here")));
+        assert_eq!(strip_one_ci_prefix("GITHUB: url goes here",
+                                       ["issue:", "github:"].into_iter()),
+                   Some(String::from("url goes here")));
+        assert_eq!(strip_one_ci_prefix("issue: url goes here",
+                                       ["issue:", "github:"].into_iter()),
+                   Some(String::from("url goes here")));
+        assert_eq!(strip_one_ci_prefix("topic: url goes here",
+                                       ["issue:", "github:"].into_iter()),
+                   None);
+    }
+}
