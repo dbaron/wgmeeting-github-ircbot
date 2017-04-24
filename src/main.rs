@@ -1,3 +1,10 @@
+// see 'rustc -W help'
+#![warn(missing_docs, unused_extern_crates, unused_results)]
+
+//! An IRC bot that posts comments to github when W3C-style IRC minuting is
+//! combined with "Github topic:" or "Github issue:" lines that give the
+//! github issue to comment in.
+
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -692,6 +699,7 @@ impl GithubCommentTask {
         }
     }
 
+    #[allow(unused_results)]
     fn run(self) {
         thread::spawn(move || { self.main(); });
     }
