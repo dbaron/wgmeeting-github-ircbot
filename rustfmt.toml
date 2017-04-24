@@ -1,3 +1,4 @@
+# documentation at "rustfmt --config-help"
 # documentation at https://github.com/rust-lang-nursery/rustfmt/blob/master/src/config.rs
 max_width = 78
 error_on_line_overflow = false
