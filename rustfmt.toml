@@ -4,3 +4,6 @@ error_on_line_overflow = false
 wrap_comments = true
 comment_width = 78
 format_strings = true
+
+reorder_imports = true
+reorder_imported_names = true

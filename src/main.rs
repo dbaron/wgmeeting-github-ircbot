@@ -9,22 +9,20 @@ extern crate hyper;
 extern crate hubcaps;
 extern crate hyper_native_tls;
 
-use std::cmp;
-use std::env;
-use std::fmt;
-use std::thread;
-use std::collections::HashMap;
-use std::ascii::AsciiExt;
-use regex::Regex;
-
-use irc::client::prelude::*;
-use irc::client::data::command::Command;
-
+use hubcaps::{Credentials, Github};
+use hubcaps::comments::CommentOptions;
 use hyper::Client;
 use hyper::net::HttpsConnector;
 use hyper_native_tls::NativeTlsClient;
-use hubcaps::{Credentials, Github};
-use hubcaps::comments::CommentOptions;
+use irc::client::data::command::Command;
+use irc::client::prelude::*;
+use regex::Regex;
+use std::ascii::AsciiExt;
+use std::cmp;
+use std::collections::HashMap;
+use std::env;
+use std::fmt;
+use std::thread;
 
 fn main() {
     env_logger::init().unwrap();
