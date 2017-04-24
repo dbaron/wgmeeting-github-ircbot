@@ -31,14 +31,19 @@ fn main() {
 
     let config_file = {
         let mut args = env::args_os().skip(1); // skip program name
-        let config_file = args.next().expect("Expected a single command-line argument, the JSON configuration file.");
+        let config_file = args.next()
+            .expect("Expected a single command-line argument, the JSON \
+                     configuration file.");
         if args.next().is_some() {
-            panic!("Expected only a single command-line argument, the JSON configuration file.");
+            panic!("Expected only a single command-line argument, the JSON \
+                    configuration file.");
         }
         config_file
     };
 
-    let server = IrcServer::new(config_file).expect("Couldn't initialize server with given configuration file");
+    let server =
+        IrcServer::new(config_file).expect("Couldn't initialize server \
+                                            with given configuration file");
     server.identify().unwrap();
 
     let options = server
@@ -221,20 +226,28 @@ fn handle_bot_command<'opts>(server: &IrcServer,
             send_line(None,
                       "  intro     - Send a message describing what I do.");
             send_line(None,
-                      "  status    - Send a message with current bot status.");
+                      "  status    - Send a message with current bot \
+                       status.");
             send_line(None,
-                      "  bye       - Leave the channel.  (You can /invite me back.)");
+                      "  bye       - Leave the channel.  (You can /invite \
+                       me back.)");
             send_line(None,
-                      "  end topic - End the current topic without starting a new one.");
+                      "  end topic - End the current topic without \
+                       starting a new one.");
         }
         "intro" => {
             let config = server.config();
             send_line(None,
-                      "My job is to leave comments in github when the group discusses github issues and takes minutes in IRC.");
+                      "My job is to leave comments in github when the \
+                       group discusses github issues and takes minutes in \
+                       IRC.");
             send_line(None,
-                      "I separate discussions by the \"Topic:\" lines, and I know what github issues to use only by lines of the form \"GitHub topic: <url> | none\".");
+                      "I separate discussions by the \"Topic:\" lines, and \
+                       I know what github issues to use only by lines of \
+                       the form \"GitHub topic: <url> | none\".");
             send_line(None,
-                      &*format!("I'm only allowed to comment on issues in the repositories: {}.",
+                      &*format!("I'm only allowed to comment on issues in \
+                                 the repositories: {}.",
                                 options["github_repos_allowed"]));
             let owners = if let Some(v) = config.owners.as_ref() {
                 v.join(" ")
@@ -242,13 +255,17 @@ fn handle_bot_command<'opts>(server: &IrcServer,
                 String::from("")
             };
             send_line(None,
-                      &*format!("My source code is at {} and I'm run by {}.",
+                      &*format!("My source code is at {} and I'm run by \
+                                 {}.",
                                 options["source"],
                                 owners));
         }
         "status" => {
             send_line(response_username,
-                      &*format!("This is {} version {}, compiled from {} which is probably in the repository at https://github.com/dbaron/wgmeeting-github-ircbot/",
+                      &*format!("This is {} version {}, compiled from {} \
+                                 which is probably in the repository at \
+                                 https://github.\
+                                 com/dbaron/wgmeeting-github-ircbot/",
                                 env!("CARGO_PKG_NAME"),
                                 env!("CARGO_PKG_VERSION"),
                                 include_str!(concat!(env!("OUT_DIR"),
@@ -262,7 +279,8 @@ fn handle_bot_command<'opts>(server: &IrcServer,
                 let ref channel_data = irc_state.channel_data[channel];
                 if let Some(ref topic) = channel_data.current_topic {
                     send_line(None,
-                              &*format!("  {} ({} lines buffered on \"{}\")",
+                              &*format!("  {} ({} lines buffered on \
+                                         \"{}\")",
                                         channel,
                                         topic.lines.len(),
                                         topic.topic));
@@ -288,9 +306,15 @@ fn handle_bot_command<'opts>(server: &IrcServer,
                 let this_channel_data =
                     irc_state.channel_data(response_target, options);
                 this_channel_data.end_topic(server);
-                server.send(Command::PART(String::from(response_target),
-                        Some(format!("Leaving at request of {}.  Feel free to /invite me back.",
-                                     response_username.unwrap())))).unwrap();
+                server
+                    .send(Command::PART(String::from(response_target),
+                                        Some(format!("Leaving at \
+                                                      request of {}.  \
+                                                      Feel free to \
+                                                      /invite me back.",
+                                                     response_username
+                                                         .unwrap()))))
+                    .unwrap();
             } else {
                 send_line(response_username, "'bye' only works in a channel");
             }
@@ -425,7 +449,8 @@ impl fmt::Display for TopicData {
                         escape_as_code_span(&*self.topic)));
         } else {
             try!(write!(f,
-                        "The CSS Working Group just discussed {}, and agreed to the following resolutions:\n\n",
+                        "The CSS Working Group just discussed {}, and \
+                         agreed to the following resolutions:\n\n",
                         escape_as_code_span(&*self.topic)));
             for resolution in &self.resolutions {
                 try!(write!(f, "* {}\n", escape_as_code_span(&*resolution)));
@@ -433,7 +458,8 @@ impl fmt::Display for TopicData {
         }
 
         try!(write!(f,
-                    "\n<details><summary>The full IRC log of that discussion</summary>\n"));
+                    "\n<details><summary>The full IRC log of that \
+                     discussion</summary>\n"));
         for line in &self.lines {
             try!(write!(f,
                         "{}<br>\n",
@@ -502,9 +528,15 @@ impl<'opts> ChannelData<'opts> {
         match self.current_topic {
             None => {
                 match extract_github_url(&line.message, self.options, &None) {
-                    (Some(_), None) => Some(String::from("I can't set a github URL because you haven't started a topic.")),
+                    (Some(_), None) => {
+                        Some(String::from("I can't set a github URL \
+                                           because you haven't started a \
+                                           topic."))
+                    }
                     (None, Some(ref extract_response)) => {
-                        Some(String::from("I can't set a github URL because you haven't started a topic.  Also, ") +
+                        Some(String::from("I can't set a github URL \
+                                           because you haven't started a \
+                                           topic.  Also, ") +
                              extract_response)
                     }
                     (None, None) => None,
@@ -520,14 +552,18 @@ impl<'opts> ChannelData<'opts> {
                                       &data.github_url) {
                     (None, _) => extract_failure_response,
                     (Some(&None), &None) => None,
-                    (Some(&None), _) => Some(String::from("OK, I won't post this discussion to GitHub.")),
+                    (Some(&None), _) => {
+                        Some(String::from("OK, I won't post this \
+                                           discussion to GitHub."))
+                    }
                     (Some(&Some(ref new_url)), &None) => {
                         Some(format!("OK, I'll post this discussion to {}.",
                                      new_url))
                     }
                     (Some(new_url), old_url) if *old_url == *new_url => None,
                     (Some(&Some(ref new_url)), &Some(ref old_url)) => {
-                        Some(format!("OK, I'll post this discussion to {} instead of {} like you said before.",
+                        Some(format!("OK, I'll post this discussion to {} \
+                                      instead of {} like you said before.",
                                      new_url,
                                      old_url))
                     }
@@ -603,12 +639,15 @@ fn extract_github_url(message: &str,
                 (Some(Some(maybe_url.clone())), None)
             } else {
                 (None,
-                 Some(format!("I can't comment on that github issue because it's not in a repository I'm allowed to comment on, which are: {}.",
+                 Some(format!("I can't comment on that github issue \
+                               because it's not in a repository I'm \
+                               allowed to comment on, which are: {}.",
                               allowed_repos)))
             }
         } else {
             (None,
-             Some(String::from("I can't comment on that because it doesn't look like a github issue to me.")))
+             Some(String::from("I can't comment on that because it \
+                                doesn't look like a github issue to me.")))
         }
     } else {
         if let Some(ref rematch) = GITHUB_URL_PART_RE.find(message) {
@@ -616,7 +655,11 @@ fn extract_github_url(message: &str,
                 (None, None)
             } else {
                 (None,
-                 Some(String::from("Because I don't want to spam github issues unnecessarily, I won't comment in that github issue unless you write \"Github topic: <issue-url> | none\" (or \"Github issue: ...\").")))
+                 Some(String::from("Because I don't want to spam github \
+                                    issues unnecessarily, I won't comment \
+                                    in that github issue unless you write \
+                                    \"Github topic: <issue-url> | none\" \
+                                    (or \"Github issue: ...\").")))
             }
         } else {
             (None, None)
@@ -694,7 +737,9 @@ impl GithubCommentTask {
                     let labels = issue.labels();
                     for label in ["Agenda+", "Agenda+ F2F"].into_iter() {
                         if labels.remove(label).is_ok() {
-                            response.push_str(&*format!(" and removed the \"{}\" label", label));
+                            response.push_str(&*format!(" and removed the \
+                                                         \"{}\" label",
+                                                        label));
                         }
                     }
                 }

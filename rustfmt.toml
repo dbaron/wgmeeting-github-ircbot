@@ -3,3 +3,4 @@ max_width = 78
 error_on_line_overflow = false
 wrap_comments = true
 comment_width = 78
+format_strings = true
