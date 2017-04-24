@@ -29,15 +29,14 @@ use hubcaps::comments::CommentOptions;
 fn main() {
     env_logger::init().unwrap();
 
-    let config_file =
-        {
-            let mut args = env::args_os().skip(1); // skip program name
-            let config_file = args.next().expect("Expected a single command-line argument, the JSON configuration file.");
-            if args.next().is_some() {
-                panic!("Expected only a single command-line argument, the JSON configuration file.");
-            }
-            config_file
-        };
+    let config_file = {
+        let mut args = env::args_os().skip(1); // skip program name
+        let config_file = args.next().expect("Expected a single command-line argument, the JSON configuration file.");
+        if args.next().is_some() {
+            panic!("Expected only a single command-line argument, the JSON configuration file.");
+        }
+        config_file
+    };
 
     let server = IrcServer::new(config_file).expect("Couldn't initialize server with given configuration file");
     server.identify().unwrap();
@@ -63,11 +62,14 @@ fn main() {
                     }
                     Some(ref source) => {
                         let source_ = String::from(*source);
-                        let line = if msg.starts_with("\x01ACTION ") && msg.ends_with("\x01") {
+                        let line = if msg.starts_with("\x01ACTION ") &&
+                                      msg.ends_with("\x01") {
                             ChannelLine {
                                 source: source_,
                                 is_action: true,
-                                message: filter_bot_hidden(&msg[8..msg.len() - 1]),
+                                message: filter_bot_hidden(&msg[8..
+                                                            msg.len() -
+                                                            1]),
                             }
                         } else {
                             ChannelLine {
@@ -90,7 +92,8 @@ fn main() {
                         } else if target.starts_with('#') {
                             // A message in a channel.
                             info!("[{}] {}", target, line);
-                            match check_command_in_channel(mynick, &line.message) {
+                            match check_command_in_channel(mynick,
+                                                           &line.message) {
                                 Some(ref command) => {
                                     handle_bot_command(&server,
                                                        options,
@@ -103,10 +106,15 @@ fn main() {
                                 None => {
                                     if !is_present_plus(&*line.message) {
                                         let this_channel_data =
-                                            irc_state.channel_data(target, options);
-                                        if let Some(response) = this_channel_data
-                                               .add_line(&server, line) {
-                                            send_irc_line(&server, target, true, response);
+                                            irc_state.channel_data(target,
+                                                                   options);
+                                        if let Some(response) =
+                                            this_channel_data
+                                                .add_line(&server, line) {
+                                            send_irc_line(&server,
+                                                          target,
+                                                          true,
+                                                          response);
                                         }
                                     }
                                 }
@@ -148,7 +156,8 @@ fn is_present_plus(line: &str) -> bool {
         std::cmp::Ordering::Less => false,
         std::cmp::Ordering::Equal => bytes.eq_ignore_ascii_case(present_plus),
         std::cmp::Ordering::Greater => {
-            bytes[..present_plus.len() + 1].eq_ignore_ascii_case("present+ ".as_bytes())
+            bytes[..present_plus.len() + 1]
+                .eq_ignore_ascii_case("present+ ".as_bytes())
         }
     }
 }
@@ -167,7 +176,10 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
     Some(String::from(after_punct.trim_left()))
 }
 
-fn send_irc_line(server: &IrcServer, target: &str, is_action: bool, line: String) {
+fn send_irc_line(server: &IrcServer,
+                 target: &str,
+                 is_action: bool,
+                 line: String) {
     let adjusted_line = if is_action {
         format!("\x01ACTION {}\x01", line)
     } else {
@@ -189,7 +201,10 @@ fn handle_bot_command<'opts>(server: &IrcServer,
             None => String::from(line),
             Some(username) => String::from(username) + ", " + line,
         };
-        send_irc_line(server, response_target, response_is_action, line_with_nick);
+        send_irc_line(server,
+                      response_target,
+                      response_is_action,
+                      line_with_nick);
     };
 
     // Remove a question mark at the end of the command if it exists
@@ -203,7 +218,8 @@ fn handle_bot_command<'opts>(server: &IrcServer,
         "help" => {
             send_line(response_username, "The commands I understand are:");
             send_line(None, "  help      - Send this message.");
-            send_line(None, "  intro     - Send a message describing what I do.");
+            send_line(None,
+                      "  intro     - Send a message describing what I do.");
             send_line(None,
                       "  status    - Send a message with current bot status.");
             send_line(None,
@@ -235,9 +251,12 @@ fn handle_bot_command<'opts>(server: &IrcServer,
                       &*format!("This is {} version {}, compiled from {} which is probably in the repository at https://github.com/dbaron/wgmeeting-github-ircbot/",
                                 env!("CARGO_PKG_NAME"),
                                 env!("CARGO_PKG_VERSION"),
-                                include_str!(concat!(env!("OUT_DIR"), "/git-hash"))));
-            send_line(None, "I currently have data for the following channels:");
-            let mut sorted_channels: Vec<&String> = irc_state.channel_data.keys().collect();
+                                include_str!(concat!(env!("OUT_DIR"),
+                                                     "/git-hash"))));
+            send_line(None,
+                      "I currently have data for the following channels:");
+            let mut sorted_channels: Vec<&String> =
+                irc_state.channel_data.keys().collect();
             sorted_channels.sort();
             for channel in sorted_channels {
                 let ref channel_data = irc_state.channel_data[channel];
@@ -248,19 +267,26 @@ fn handle_bot_command<'opts>(server: &IrcServer,
                                         topic.lines.len(),
                                         topic.topic));
                     match topic.github_url {
-                        None => send_line(None, "    no GitHub URL to comment on"),
+                        None => {
+                            send_line(None, "    no GitHub URL to comment on")
+                        }
                         Some(ref github_url) => {
-                            send_line(None, &*format!("    will comment on {}", github_url))
+                            send_line(None,
+                                      &*format!("    will comment on {}",
+                                                github_url))
                         }
                     };
                 } else {
-                    send_line(None, &*format!("  {} (no topic data buffered)", channel));
+                    send_line(None,
+                              &*format!("  {} (no topic data buffered)",
+                                        channel));
                 }
             }
         }
         "bye" => {
             if response_target.starts_with('#') {
-                let this_channel_data = irc_state.channel_data(response_target, options);
+                let this_channel_data =
+                    irc_state.channel_data(response_target, options);
                 this_channel_data.end_topic(server);
                 server.send(Command::PART(String::from(response_target),
                         Some(format!("Leaving at request of {}.  Feel free to /invite me back.",
@@ -271,10 +297,12 @@ fn handle_bot_command<'opts>(server: &IrcServer,
         }
         "end topic" => {
             if response_target.starts_with('#') {
-                let this_channel_data = irc_state.channel_data(response_target, options);
+                let this_channel_data =
+                    irc_state.channel_data(response_target, options);
                 this_channel_data.end_topic(server);
             } else {
-                send_line(response_username, "'end topic' only works in a channel");
+                send_line(response_username,
+                          "'end topic' only works in a channel");
             }
         }
         _ => {
@@ -350,7 +378,8 @@ impl TopicData {
 /// in the text that we want to escape, and then surrounding the text by
 /// one more than that number of characters.
 fn escape_as_code_span(s: &str) -> String {
-    // // This is simpler but potentially O(N^2), but only if people type lots of backticks.
+    // // This is simpler but potentially O(N^2), but only if people type lots
+    // // of backticks.
     // let tick_count = (1..).find(|n| !s.contains("`".repeat(n)));
 
     // Note: max doesn't include cur.
@@ -406,7 +435,9 @@ impl fmt::Display for TopicData {
         try!(write!(f,
                     "\n<details><summary>The full IRC log of that discussion</summary>\n"));
         for line in &self.lines {
-            try!(write!(f, "{}<br>\n", escape_for_html_block(&*format!("{}", line))));
+            try!(write!(f,
+                        "{}<br>\n",
+                        escape_for_html_block(&*format!("{}", line))));
         }
         try!(write!(f, "</details>\n"));
         Ok(())
@@ -446,7 +477,9 @@ fn strip_one_ci_prefix<'a, T>(s: &str, prefixes: T) -> Option<String>
 }
 
 impl<'opts> ChannelData<'opts> {
-    fn new(channel_name_: &str, options_: &'opts HashMap<String, String>) -> ChannelData<'opts> {
+    fn new(channel_name_: &str,
+           options_: &'opts HashMap<String, String>)
+           -> ChannelData<'opts> {
         ChannelData {
             channel_name: String::from(channel_name_),
             current_topic: None,
@@ -455,7 +488,10 @@ impl<'opts> ChannelData<'opts> {
     }
 
     // Returns the response that should be sent to the message over IRC.
-    fn add_line(&mut self, server: &IrcServer, line: ChannelLine) -> Option<String> {
+    fn add_line(&mut self,
+                server: &IrcServer,
+                line: ChannelLine)
+                -> Option<String> {
         if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
             self.start_topic(server, topic);
         }
@@ -477,13 +513,17 @@ impl<'opts> ChannelData<'opts> {
             }
             Some(ref mut data) => {
                 let (new_url_option, extract_failure_response) =
-                    extract_github_url(&line.message, self.options, &data.github_url);
-                let response = match (new_url_option.as_ref(), &data.github_url) {
+                    extract_github_url(&line.message,
+                                       self.options,
+                                       &data.github_url);
+                let response = match (new_url_option.as_ref(),
+                                      &data.github_url) {
                     (None, _) => extract_failure_response,
                     (Some(&None), &None) => None,
                     (Some(&None), _) => Some(String::from("OK, I won't post this discussion to GitHub.")),
                     (Some(&Some(ref new_url)), &None) => {
-                        Some(format!("OK, I'll post this discussion to {}.", new_url))
+                        Some(format!("OK, I'll post this discussion to {}.",
+                                     new_url))
                     }
                     (Some(new_url), old_url) if *old_url == *new_url => None,
                     (Some(&Some(ref new_url)), &Some(ref old_url)) => {
@@ -520,7 +560,10 @@ impl<'opts> ChannelData<'opts> {
         // TODO: Test the topic boundary code.
         if let Some(topic) = self.current_topic.take() {
             if topic.github_url.is_some() {
-                let task = GithubCommentTask::new(server, &*self.channel_name, topic, self.options);
+                let task = GithubCommentTask::new(server,
+                                                  &*self.channel_name,
+                                                  topic,
+                                                  self.options);
                 task.run();
             }
         }
@@ -547,10 +590,12 @@ fn extract_github_url(message: &str,
     }
     let ref allowed_repos = options["github_repos_allowed"];
     if let Some(ref maybe_url) =
-        strip_one_ci_prefix(&message, ["github topic:", "github issue:"].into_iter()) {
+        strip_one_ci_prefix(&message,
+                            ["github topic:", "github issue:"].into_iter()) {
         if maybe_url.to_lowercase() == "none" {
             (Some(None), None)
-        } else if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
+        } else if let Some(ref caps) = GITHUB_URL_WHOLE_RE
+                      .captures(maybe_url) {
             if allowed_repos
                    .split_whitespace()
                    .collect::<Vec<&str>>()
@@ -620,12 +665,15 @@ impl GithubCommentTask {
         if let Some(ref github_url) = self.data.github_url {
             if let Some(ref caps) = GITHUB_URL_RE.captures(github_url) {
                 let repo = self.github
-                    .repo(String::from(&caps["owner"]), String::from(&caps["repo"]));
-                let issue = repo.issue(caps["number"].parse::<u64>().unwrap());
+                    .repo(String::from(&caps["owner"]),
+                          String::from(&caps["repo"]));
+                let issue =
+                    repo.issue(caps["number"].parse::<u64>().unwrap());
                 let comments = issue.comments();
 
                 let comment_text = format!("{}", self.data);
-                let err = comments.create(&CommentOptions { body: comment_text });
+                let err =
+                    comments.create(&CommentOptions { body: comment_text });
                 let mut response = format!("{} on {}",
                                            if err.is_ok() {
                                                "Successfully commented"
@@ -651,7 +699,10 @@ impl GithubCommentTask {
                     }
                 }
 
-                send_irc_line(&self.server, &*self.response_target, true, response);
+                send_irc_line(&self.server,
+                              &*self.response_target,
+                              true,
+                              response);
             } else {
                 warn!("How does {} fail to match now when it matched before?",
                       github_url)
