@@ -70,7 +70,7 @@ fn main() {
                             ChannelLine {
                                 source: source_,
                                 is_action: true,
-                                message: filter_bot_hidden(&msg[8..
+                                message: filter_bot_hidden(&msg[8 ..
                                                             msg.len() -
                                                             1]),
                             }
@@ -146,7 +146,7 @@ fn main() {
 fn filter_bot_hidden(line: &str) -> String {
     match line.find("[off]") {
         None => String::from(line),
-        Some(index) => String::from(&line[..index]) + "[hidden]",
+        Some(index) => String::from(&line[.. index]) + "[hidden]",
     }
 }
 
@@ -159,7 +159,7 @@ fn is_present_plus(line: &str) -> bool {
         std::cmp::Ordering::Less => false,
         std::cmp::Ordering::Equal => bytes.eq_ignore_ascii_case(present_plus),
         std::cmp::Ordering::Greater => {
-            bytes[..present_plus.len() + 1]
+            bytes[.. present_plus.len() + 1]
                 .eq_ignore_ascii_case("present+ ".as_bytes())
         }
     }
@@ -171,11 +171,11 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
     if !msg.starts_with(mynick) {
         return None;
     }
-    let after_nick = &msg[mynick.len()..];
+    let after_nick = &msg[mynick.len() ..];
     if !after_nick.starts_with(":") && !after_nick.starts_with(",") {
         return None;
     }
-    let after_punct = &after_nick[1..];
+    let after_punct = &after_nick[1 ..];
     Some(String::from(after_punct.trim_left()))
 }
 
@@ -212,7 +212,7 @@ fn handle_bot_command<'opts>(server: &IrcServer,
 
     // Remove a question mark at the end of the command if it exists
     let command_without_question_mark = if command.ends_with("?") {
-        &command[..command.len() - 1]
+        &command[.. command.len() - 1]
     } else {
         command
     };
@@ -476,14 +476,14 @@ fn ci_starts_with(s: &str, prefix: &str) -> bool {
     s.len() >= prefix.len() &&
     prefix
         .as_bytes()
-        .eq_ignore_ascii_case(&s.as_bytes()[..prefix.len()])
+        .eq_ignore_ascii_case(&s.as_bytes()[.. prefix.len()])
 }
 
 /// Remove a case-insensitive start of the line, and if that prefix is
 /// present return the rest of the line.
 fn strip_ci_prefix(s: &str, prefix: &str) -> Option<String> {
     if ci_starts_with(s, prefix) {
-        Some(String::from(s[prefix.len()..].trim_left()))
+        Some(String::from(s[prefix.len() ..].trim_left()))
     } else {
         None
     }

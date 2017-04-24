@@ -8,3 +8,5 @@ format_strings = true
 
 reorder_imports = true
 reorder_imported_names = true
+
+spaces_around_ranges = true
