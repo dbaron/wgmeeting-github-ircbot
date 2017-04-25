@@ -32,5 +32,21 @@ fn main() {
         IrcServer::new(config_file).expect("Couldn't initialize server \
                                             with given configuration file");
 
-    main_loop(server, GithubType::RealGithubConnection)
+    server.identify().unwrap();
+
+    let options = server
+        .config()
+        .options
+        .as_ref()
+        .expect("No options property within configuration?");
+
+    // FIXME: Add a way to ask the bot to reboot itself?
+    let mut irc_state = IRCState::new(GithubType::RealGithubConnection);
+    for message in server.iter() {
+        let message = message.unwrap(); // panic if there's an error
+        main_loop_iteration(server.clone(),
+                            &mut irc_state,
+                            options,
+                            &message);
+    }
 }

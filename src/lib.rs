@@ -41,103 +41,90 @@ pub enum GithubType {
 
 /// Run the main loop of the bot, given an IRC server (with a real or mock
 /// connection).
-pub fn main_loop(server: IrcServer, github_type: GithubType) {
-    server.identify().unwrap();
-
-    let options = server
-        .config()
-        .options
-        .as_ref()
-        .expect("No options property within configuration?");
-
-    // FIXME: Add a way to ask the bot to reboot itself?
-    let mut irc_state = IRCState::new(github_type);
-
-    for message in server.iter() {
-        let message = message.unwrap(); // panic if there's an error
-
-        match message.command {
-            Command::PRIVMSG(ref target, ref msg) => {
-                match message.source_nickname() {
-                    None => {
-                        warn!("PRIVMSG without a source! {}",
-                              format!("{}", message).trim());
-                    }
-                    Some(ref source) => {
-                        let source_ = String::from(*source);
-                        let line = if msg.starts_with("\x01ACTION ") &&
-                                      msg.ends_with("\x01") {
-                            ChannelLine {
-                                source: source_,
-                                is_action: true,
-                                message: filter_bot_hidden(&msg[8 ..
-                                                            msg.len() -
-                                                            1]),
+pub fn main_loop_iteration<'opts>(server: IrcServer,
+                                  irc_state: &mut IRCState<'opts>,
+                                  options: &'opts HashMap<String, String>,
+                                  message: &Message) {
+    match message.command {
+        Command::PRIVMSG(ref target, ref msg) => {
+            match message.source_nickname() {
+                None => {
+                    warn!("PRIVMSG without a source! {}",
+                          format!("{}", message).trim());
+                }
+                Some(ref source) => {
+                    let source_ = String::from(*source);
+                    let line = if msg.starts_with("\x01ACTION ") &&
+                                  msg.ends_with("\x01") {
+                        ChannelLine {
+                            source: source_,
+                            is_action: true,
+                            message: filter_bot_hidden(&msg[8 ..
+                                                        msg.len() - 1]),
+                        }
+                    } else {
+                        ChannelLine {
+                            source: source_,
+                            is_action: false,
+                            message: filter_bot_hidden(msg),
+                        }
+                    };
+                    let mynick = server.current_nickname();
+                    if target == mynick {
+                        // An actual private message.
+                        info!("[{}] {}", source, line);
+                        handle_bot_command(&server,
+                                           options,
+                                           irc_state,
+                                           &line.message,
+                                           source,
+                                           false,
+                                           None)
+                    } else if target.starts_with('#') {
+                        // A message in a channel.
+                        info!("[{}] {}", target, line);
+                        match check_command_in_channel(mynick,
+                                                       &line.message) {
+                            Some(ref command) => {
+                                handle_bot_command(&server,
+                                                   options,
+                                                   irc_state,
+                                                   command,
+                                                   target,
+                                                   line.is_action,
+                                                   Some(source))
                             }
-                        } else {
-                            ChannelLine {
-                                source: source_,
-                                is_action: false,
-                                message: filter_bot_hidden(msg),
-                            }
-                        };
-                        let mynick = server.current_nickname();
-                        if target == mynick {
-                            // An actual private message.
-                            info!("[{}] {}", source, line);
-                            handle_bot_command(&server,
-                                               options,
-                                               &mut irc_state,
-                                               &line.message,
-                                               source,
-                                               false,
-                                               None)
-                        } else if target.starts_with('#') {
-                            // A message in a channel.
-                            info!("[{}] {}", target, line);
-                            match check_command_in_channel(mynick,
-                                                           &line.message) {
-                                Some(ref command) => {
-                                    handle_bot_command(&server,
-                                                       options,
-                                                       &mut irc_state,
-                                                       command,
-                                                       target,
-                                                       line.is_action,
-                                                       Some(source))
-                                }
-                                None => {
-                                    if !is_present_plus(&*line.message) {
-                                        let this_channel_data =
-                                            irc_state.channel_data(target,
-                                                                   options);
-                                        if let Some(response) =
-                                            this_channel_data
-                                                .add_line(&server, line) {
-                                            send_irc_line(&server,
-                                                          target,
-                                                          true,
-                                                          response);
-                                        }
+                            None => {
+                                if !is_present_plus(&*line.message) {
+                                    let this_channel_data =
+                                        irc_state.channel_data(target,
+                                                               options);
+                                    if let Some(response) =
+                                        this_channel_data.add_line(&server,
+                                                                   line) {
+                                        send_irc_line(&server,
+                                                      target,
+                                                      true,
+                                                      response);
                                     }
                                 }
                             }
-                        } else {
-                            warn!("UNEXPECTED TARGET {} in message {}",
-                                  target,
-                                  format!("{}", message).trim());
                         }
+                    } else {
+                        warn!("UNEXPECTED TARGET {} in message {}",
+                              target,
+                              format!("{}", message).trim());
                     }
                 }
             }
-            Command::INVITE(ref target, ref channel) => {
-                if target == server.current_nickname() {
-                    // Join channels when invited.
-                    server.send_join(channel).unwrap();
-                }
-            }
-            _ => (),
         }
+        Command::INVITE(ref target, ref channel) => {
+            if target == server.current_nickname() {
+                // Join channels when invited.
+                server.send_join(channel).unwrap();
+            }
+        }
+        _ => (),
     }
 }
 
@@ -334,13 +321,16 @@ fn handle_bot_command<'opts>(server: &IrcServer,
     }
 }
 
-struct IRCState<'opts> {
+/// The data from IRC channels that we're storing in order to make comments in
+/// github.
+pub struct IRCState<'opts> {
     channel_data: HashMap<String, ChannelData<'opts>>,
     github_type: GithubType,
 }
 
 impl<'opts> IRCState<'opts> {
-    fn new(github_type_: GithubType) -> IRCState<'opts> {
+    /// Create an empty IRCState.
+    pub fn new(github_type_: GithubType) -> IRCState<'opts> {
         IRCState {
             channel_data: HashMap::new(),
             github_type: github_type_,
