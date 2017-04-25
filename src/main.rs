@@ -32,5 +32,5 @@ fn main() {
         IrcServer::new(config_file).expect("Couldn't initialize server \
                                             with given configuration file");
 
-    main_loop(server)
+    main_loop(server, GithubType::RealGithubConnection)
 }

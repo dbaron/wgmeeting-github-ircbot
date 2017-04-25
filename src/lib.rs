@@ -29,9 +29,19 @@ use std::collections::HashMap;
 use std::fmt;
 use std::thread;
 
+#[derive(Copy, Clone)]
+/// Whether to use a real github connection for real use of the bot, or a fake
+/// one for testing.
+pub enum GithubType {
+    /// Use a real github connection for operating the bot.
+    RealGithubConnection,
+    /// Don't make real connections to github (for tests).
+    MockGithubConnection,
+}
+
 /// Run the main loop of the bot, given an IRC server (with a real or mock
 /// connection).
-pub fn main_loop(server: IrcServer) {
+pub fn main_loop(server: IrcServer, github_type: GithubType) {
     server.identify().unwrap();
 
     let options = server
@@ -41,7 +51,7 @@ pub fn main_loop(server: IrcServer) {
         .expect("No options property within configuration?");
 
     // FIXME: Add a way to ask the bot to reboot itself?
-    let mut irc_state = IRCState::new();
+    let mut irc_state = IRCState::new(github_type);
 
     for message in server.iter() {
         let message = message.unwrap(); // panic if there's an error
@@ -326,20 +336,29 @@ fn handle_bot_command<'opts>(server: &IrcServer,
 
 struct IRCState<'opts> {
     channel_data: HashMap<String, ChannelData<'opts>>,
+    github_type: GithubType,
 }
 
 impl<'opts> IRCState<'opts> {
-    fn new() -> IRCState<'opts> {
-        IRCState { channel_data: HashMap::new() }
+    fn new(github_type_: GithubType) -> IRCState<'opts> {
+        IRCState {
+            channel_data: HashMap::new(),
+            github_type: github_type_,
+        }
     }
 
     fn channel_data(&mut self,
                     channel: &str,
                     options: &'opts HashMap<String, String>)
                     -> &mut ChannelData<'opts> {
+        let github_type = self.github_type;
         self.channel_data
             .entry(String::from(channel))
-            .or_insert_with(|| ChannelData::new(channel, options))
+            .or_insert_with(|| {
+                                ChannelData::new(channel,
+                                                 options,
+                                                 github_type)
+                            })
     }
 }
 
@@ -360,6 +379,7 @@ struct ChannelData<'opts> {
     channel_name: String,
     current_topic: Option<TopicData>,
     options: &'opts HashMap<String, String>,
+    github_type: GithubType,
 }
 
 impl fmt::Display for ChannelLine {
@@ -492,12 +512,14 @@ fn strip_one_ci_prefix<'a, T>(s: &str, prefixes: T) -> Option<String>
 
 impl<'opts> ChannelData<'opts> {
     fn new(channel_name_: &str,
-           options_: &'opts HashMap<String, String>)
+           options_: &'opts HashMap<String, String>,
+           github_type_: GithubType)
            -> ChannelData<'opts> {
         ChannelData {
             channel_name: String::from(channel_name_),
             current_topic: None,
             options: options_,
+            github_type: github_type_,
         }
     }
 
@@ -587,7 +609,8 @@ impl<'opts> ChannelData<'opts> {
                 let task = GithubCommentTask::new(server,
                                                   &*self.channel_name,
                                                   topic,
-                                                  self.options);
+                                                  self.options,
+                                                  self.github_type);
                 task.run();
             }
         }
@@ -660,20 +683,24 @@ struct GithubCommentTask {
     server: IrcServer,
     response_target: String,
     data: TopicData,
-    github: Github,
+    github: Option<Github>, // None means we're mocking the connection
 }
 
 impl GithubCommentTask {
     fn new(server_: &IrcServer,
            response_target_: &str,
            data_: TopicData,
-           options: &HashMap<String, String>)
+           options: &HashMap<String, String>,
+           github_type_: GithubType)
            -> GithubCommentTask {
-        let github_ =
-            Github::new(&*options["github_uastring"],
+        let github_ = match github_type_ {
+            GithubType::RealGithubConnection =>
+            Some(Github::new(&*options["github_uastring"],
                         Client::with_connector(HttpsConnector::new(NativeTlsClient::new()
                                                                        .unwrap())),
-                        Credentials::Token(options["github_access_token"].clone()));
+                        Credentials::Token(options["github_access_token"].clone()))),
+            GithubType::MockGithubConnection => None,
+        };
         GithubCommentTask {
             server: server_.clone(),
             response_target: String::from(response_target_),
@@ -684,7 +711,14 @@ impl GithubCommentTask {
 
     #[allow(unused_results)]
     fn run(self) {
-        thread::spawn(move || { self.main(); });
+        // For real github connections, run on another thread, but for fake
+        // ones, run synchronously to make testing easier.
+        match self.github {
+            Some(_) => {
+                thread::spawn(move || { self.main(); });
+            }
+            None => self.main(),
+        }
     }
 
     fn main(&self) {
@@ -696,42 +730,63 @@ impl GithubCommentTask {
 
         if let Some(ref github_url) = self.data.github_url {
             if let Some(ref caps) = GITHUB_URL_RE.captures(github_url) {
-                let repo = self.github
-                    .repo(String::from(&caps["owner"]),
-                          String::from(&caps["repo"]));
-                let issue =
-                    repo.issue(caps["number"].parse::<u64>().unwrap());
-                let comments = issue.comments();
+                let response = match self.github {
+                    Some(ref github) => {
 
-                let comment_text = format!("{}", self.data);
-                let err =
-                    comments.create(&CommentOptions { body: comment_text });
-                let mut response = format!("{} on {}",
-                                           if err.is_ok() {
-                                               "Successfully commented"
-                                           } else {
-                                               "UNABLE TO COMMENT"
-                                           },
-                                           github_url);
+                        let repo =
+                            github.repo(String::from(&caps["owner"]),
+                                        String::from(&caps["repo"]));
+                        let issue = repo.issue(caps["number"]
+                                                   .parse::<u64>()
+                                                   .unwrap());
+                        let comments = issue.comments();
 
-                if self.data.resolutions.len() > 0 {
-                    // We had resolutions, so remove the "Agenda+" and
-                    // "Agenda+ F2F" tags, if present.
+                        let comment_text = format!("{}", self.data);
+                        let err = comments.create(&CommentOptions {
+                                                       body: comment_text,
+                                                   });
+                        let mut response = format!("{} on {}",
+                                                   if err.is_ok() {
+                                                       "Successfully \
+                                                        commented"
+                                                   } else {
+                                                       "UNABLE TO COMMENT"
+                                                   },
+                                                   github_url);
 
-                    // Explicitly discard any errors.  That's because this
-                    // might give an error if the label isn't present.
-                    // FIXME:  But it might also give a (different) error if
-                    // we don't have write access to the repository, so we
-                    // really ought to distinguish, and report the latter.
-                    let labels = issue.labels();
-                    for label in ["Agenda+", "Agenda+ F2F"].into_iter() {
-                        if labels.remove(label).is_ok() {
-                            response.push_str(&*format!(" and removed the \
-                                                         \"{}\" label",
-                                                        label));
+                        if self.data.resolutions.len() > 0 {
+                            // We had resolutions, so remove the "Agenda+" and
+                            // "Agenda+ F2F" tags, if present.
+
+                            // Explicitly discard any errors.  That's because
+                            // this
+                            // might give an error if the label isn't present.
+                            // FIXME:  But it might also give a (different)
+                            // error if
+                            // we don't have write access to the repository,
+                            // so we
+                            // really ought to distinguish, and report the
+                            // latter.
+                            let labels = issue.labels();
+                            for label in ["Agenda+", "Agenda+ F2F"]
+                                    .into_iter() {
+                                if labels.remove(label).is_ok() {
+                                    response
+                                        .push_str(&*format!(" and removed \
+                                                             the \"{}\" \
+                                                             label",
+                                                            label));
+                                }
+                            }
                         }
+                        response
                     }
-                }
+                    None => {
+                        format!("{} on {}",
+                                "Successfully commented",
+                                github_url)
+                    }
+                };
 
                 send_irc_line(&self.server,
                               &*self.response_target,
