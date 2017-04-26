@@ -22,8 +22,10 @@ think.   Though ScribeNick should probably be doable quickly...)
 
 # Development notes
 
-Put the github API key in ./src/config.json and then do one of:
+Put the github API key in ./src/config.json (though that's not needed
+for `cargo test`) and then do one of:
 
+    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot,test_chats cargo test
     RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run --release ./src/config.json
     RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run ./src/config-dev.json
 
