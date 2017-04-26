@@ -1,0 +1,9 @@
+>CAP END
+>NICK :test-github-bot
+>USER dbaron-gh-bot 0 * :Bot to add meeting minutes to github issues.
+<:dbaron!dbaron@host PRIVMSG #meetingbottest :Topic: line-height
+<:dbaron!dbaron@host PRIVMSG #meetingbottest :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I'll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
+<:dbaron!dbaron@host PRIVMSG #meetingbottest :This is a simple Test.
+<:dbaron!dbaron@host PRIVMSG #meetingbottest :Topic: another topic
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
