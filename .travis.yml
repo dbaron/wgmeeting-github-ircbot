@@ -1,9 +1,10 @@
-# based on:
+# This configuration is based on:
 #   https://docs.travis-ci.com/user/languages/rust/
 #   https://doc.rust-lang.org/book/release-channels.html
 #   http://johannh.me/blog/rustfmt-ci.html
-# Although much of it doesn't validate at:
-#   http://lint.travis-ci.org/
+#
+# It doesn't validate at http://lint.travis-ci.org/ or with `travis
+# lint` due to https://github.com/travis-ci/travis-yaml/issues/114
 language: rust
 rust:
   - stable
