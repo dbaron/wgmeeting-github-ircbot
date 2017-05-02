@@ -1,5 +1,6 @@
 # based on:
 #   https://docs.travis-ci.com/user/languages/rust/
+#   https://doc.rust-lang.org/book/release-channels.html
 #   http://johannh.me/blog/rustfmt-ci.html
 # but commenting out all the pieces that don't validate at:
 #   http://lint.travis-ci.org/
