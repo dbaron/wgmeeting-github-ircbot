@@ -2,17 +2,17 @@
 #   https://docs.travis-ci.com/user/languages/rust/
 #   https://doc.rust-lang.org/book/release-channels.html
 #   http://johannh.me/blog/rustfmt-ci.html
-# but commenting out all the pieces that don't validate at:
+# Although much of it doesn't validate at:
 #   http://lint.travis-ci.org/
 language: rust
-##rust:
-##  - stable
-##  - beta
-##  - nightly
-##matrix:
-##  allow_failures:
-##    - rust: nightly
-##cache: cargo
+rust:
+  - stable
+  - beta
+  - nightly
+matrix:
+  allow_failures:
+    - rust: nightly
+cache: cargo
 before_script: (cargo install rustfmt || true)
 script:
 - |
