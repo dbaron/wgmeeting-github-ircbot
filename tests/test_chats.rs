@@ -108,9 +108,6 @@ fn test_one_chat(path: &Path) {
                 // expected_result_data.extend_from_slice(line);
                 // expected_result_data.append(&mut "\r\n".bytes().collect());
 
-                expected_result_data.append(&mut "PRIVMSG #meetingbottest :"
-                                                     .bytes()
-                                                     .collect());
                 // FIXME: Clean up this total hack for \u{1} !
                 let mut line =
                     str::from_utf8(line).unwrap().replace("\\u{1}", "\u{1}");

@@ -1,6 +1,6 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: line-height
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
->\u{1}ACTION OK, I'll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I'll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is a simple Test.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: another topic
 !The CSS Working Group just discussed `line-height`.
@@ -11,4 +11,4 @@
 !&lt;dbaron> This is a simple Test.<br>
 !</details>
 !
->\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
