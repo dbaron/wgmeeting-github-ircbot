@@ -444,7 +444,11 @@ impl fmt::Display for TopicData {
         if self.resolutions.len() == 0 {
             try!(write!(f,
                         "The CSS Working Group just discussed {}.\n",
-                        escape_as_code_span(&*self.topic)));
+                        if self.topic == "" {
+                            String::from("this issue")
+                        } else {
+                            escape_as_code_span(&*self.topic)
+                        }));
         } else {
             try!(write!(f,
                         "The CSS Working Group just discussed {}, and \
