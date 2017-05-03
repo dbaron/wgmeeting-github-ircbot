@@ -3,6 +3,7 @@
 >PRIVMSG #meetingbottest :\u{1}ACTION OK, I'll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is a simple Test.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: another topic
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
 !The CSS Working Group just discussed `line-height`.
 !
 !<details><summary>The full IRC log of that discussion</summary>
@@ -11,4 +12,5 @@
 !&lt;dbaron> This is a simple Test.<br>
 !</details>
 !
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
 >PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}

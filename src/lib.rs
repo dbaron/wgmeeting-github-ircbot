@@ -776,13 +776,24 @@ impl GithubCommentTask {
                         response
                     }
                     None => {
-                        for line in comment_text.split('\n') {
+                        let send_github_comment_line = |line: &str| {
                             send_irc_line(&self.server,
                                           &*self.response_target,
                                           false,
                                           String::from("!github comment!") +
-                                          line);
+                                          line)
+                        };
+                        send_github_comment_line(format!("!BEGIN GITHUB \
+                                                         COMMENT IN {}",
+                                                         github_url)
+                                                         .as_str());
+                        for line in comment_text.split('\n') {
+                            send_github_comment_line(line);
                         }
+                        send_github_comment_line(format!("!END GITHUB \
+                                                         COMMENT IN {}",
+                                                         github_url)
+                                                         .as_str());
                         format!("{} on {}",
                                 "Successfully commented",
                                 github_url)
