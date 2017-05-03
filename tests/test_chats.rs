@@ -123,15 +123,16 @@ fn test_one_chat(path: &Path) {
                 // for now, we send the github comments over IRC when
                 // testing, but we don't encode that into the chat
                 // format
-                expected_result_data.append(&mut "PRIVMSG #meetingbottest \
-                                                  :!github comment!"
-                                                         .bytes()
-                                                         .collect());
+                expected_result_data.append(&mut "PRIVMSG github-comments :"
+                                                     .bytes()
+                                                     .collect());
                 expected_result_data.extend_from_slice(&line[1 ..]);
                 expected_result_data.append(&mut "\r\n".bytes().collect());
             }
             _ => {
-                panic!("Unexpected line in test file");
+                panic!("Unexpected line in test file {:?}:\n{}",
+                       path,
+                       str::from_utf8(line).unwrap_or("[non-UTF-8 line]"));
             }
         }
     }

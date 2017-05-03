@@ -776,12 +776,13 @@ impl GithubCommentTask {
                         response
                     }
                     None => {
+                        // Mock the github comments by sending them over IRC
+                        // to a fake user called github-comments.
                         let send_github_comment_line = |line: &str| {
                             send_irc_line(&self.server,
-                                          &*self.response_target,
+                                          "github-comments",
                                           false,
-                                          String::from("!github comment!") +
-                                          line)
+                                          String::from(line))
                         };
                         send_github_comment_line(format!("!BEGIN GITHUB \
                                                          COMMENT IN {}",
