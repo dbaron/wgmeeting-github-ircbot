@@ -724,6 +724,7 @@ impl GithubCommentTask {
 
         if let Some(ref github_url) = self.data.github_url {
             if let Some(ref caps) = GITHUB_URL_RE.captures(github_url) {
+                let comment_text = format!("{}", self.data);
                 let response = match self.github {
                     Some(ref github) => {
 
@@ -735,7 +736,6 @@ impl GithubCommentTask {
                                                    .unwrap());
                         let comments = issue.comments();
 
-                        let comment_text = format!("{}", self.data);
                         let err = comments.create(&CommentOptions {
                                                        body: comment_text,
                                                    });
@@ -776,6 +776,13 @@ impl GithubCommentTask {
                         response
                     }
                     None => {
+                        for line in comment_text.split('\n') {
+                            send_irc_line(&self.server,
+                                          &*self.response_target,
+                                          false,
+                                          String::from("!github comment!") +
+                                          line);
+                        }
                         format!("{} on {}",
                                 "Successfully commented",
                                 github_url)

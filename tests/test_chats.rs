@@ -116,6 +116,13 @@ fn test_one_chat(path: &Path) {
                 // FIXME: Need to get these in the actual data, too!
                 info!("adding line to expected results: {}",
                       str::from_utf8(line).unwrap());
+                // for now, we send the github comments over IRC when
+                // testing, but we don't encode that into the chat
+                // format
+                expected_result_data.append(&mut "PRIVMSG #meetingbottest \
+                                                  :!github comment!"
+                                                         .bytes()
+                                                         .collect());
                 expected_result_data.extend_from_slice(&line[1 ..]);
                 expected_result_data.append(&mut "\r\n".bytes().collect());
             }
