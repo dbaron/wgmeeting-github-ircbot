@@ -75,7 +75,11 @@ fn test_one_chat(path: &Path) {
     };
 
     let mut server_read_data: Vec<u8> = Vec::new();
-    let mut expected_result_data: Vec<u8> = Vec::new();
+    let mut expected_result_data: Vec<u8> =
+        "CAP END\r\nNICK :test-github-bot\r\nUSER dbaron-gh-bot 0 * :Bot \
+         to add meeting minutes to github issues.\r\n"
+                .bytes()
+                .collect();
 
     // FIXME: This doesn't test that the responses are sent at the right
     // times.  Doing that requires writing a new version of
@@ -104,6 +108,9 @@ fn test_one_chat(path: &Path) {
                 // expected_result_data.extend_from_slice(line);
                 // expected_result_data.append(&mut "\r\n".bytes().collect());
 
+                expected_result_data.append(&mut "PRIVMSG #meetingbottest :"
+                                                     .bytes()
+                                                     .collect());
                 // FIXME: Clean up this total hack for \u{1} !
                 let mut line =
                     str::from_utf8(line).unwrap().replace("\\u{1}", "\u{1}");
