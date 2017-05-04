@@ -28,9 +28,8 @@ fn main() {
         config_file
     };
 
-    let server =
-        IrcServer::new(config_file).expect("Couldn't initialize server \
-                                            with given configuration file");
+    let server = IrcServer::new(config_file).expect("Couldn't initialize server with given \
+                                                     configuration file");
 
     server.identify().unwrap();
 
@@ -44,9 +43,6 @@ fn main() {
     let mut irc_state = IRCState::new(GithubType::RealGithubConnection);
     for message in server.iter() {
         let message = message.unwrap(); // panic if there's an error
-        main_loop_iteration(server.clone(),
-                            &mut irc_state,
-                            options,
-                            &message);
+        main_loop_iteration(server.clone(), &mut irc_state, options, &message);
     }
 }

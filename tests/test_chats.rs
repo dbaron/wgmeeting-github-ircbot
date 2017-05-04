@@ -50,27 +50,24 @@ fn test_one_chat(path: &Path) {
     let irc_config: Config = Config {
         owners: Some(vec![format!("dbaron")]),
         nickname: Some(format!("test-github-bot")),
-        alt_nicks: Some(vec![format!("test-github-bot-"),
-                             format!("test-github-bot--")]),
+        alt_nicks: Some(vec![format!("test-github-bot-"), format!("test-github-bot--")]),
         username: Some(format!("dbaron-gh-bot")),
-        realname: Some(format!("Bot to add meeting minutes to github \
-                                issues.")),
+        realname: Some(format!("Bot to add meeting minutes to github issues.")),
         server: Some(format!("irc.w3.org")),
         port: Some(6667),
         use_ssl: Some(false),
         encoding: Some(format!("UTF-8")),
         channels: Some(vec![format!("#meetingbottest")]),
-        user_info: Some(format!("Bot to add meeting minutes to github \
-                                 issues.")),
+        user_info: Some(format!("Bot to add meeting minutes to github issues.")),
         // FIXME: why doesn't this work as documented?
         // source: Some(format!("https://github.
         // com/dbaron/wgmeeting-github-ircbot")),
-        options: Some(HashMap::from_iter(vec![
-                (format!("source"),
-                 format!("https://github.com/dbaron/wgmeeting-github-ircbot")),
-                (format!("github_repos_allowed"),
-                 format!("dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo"))
-            ])),
+        options: Some(HashMap::from_iter(vec![(format!("source"),
+                                               format!("https://github.\
+                                                        com/dbaron/wgmeeting-github-ircbot")),
+                                              (format!("github_repos_allowed"),
+                                               format!("dbaron/wgmeeting-github-ircbot \
+                                                        dbaron/nonexistentrepo"))])),
         ..Default::default()
     };
 
@@ -109,11 +106,8 @@ fn test_one_chat(path: &Path) {
                 // expected_result_data.append(&mut "\r\n".bytes().collect());
 
                 // FIXME: Clean up this total hack for \u{1} !
-                let mut line =
-                    str::from_utf8(line).unwrap().replace("\\u{1}", "\u{1}");
-                expected_result_data.append(&mut line[1 ..]
-                                                     .bytes()
-                                                     .collect());
+                let mut line = str::from_utf8(line).unwrap().replace("\\u{1}", "\u{1}");
+                expected_result_data.append(&mut line[1 ..].bytes().collect());
                 expected_result_data.append(&mut "\r\n".bytes().collect());
             }
             Some('!') => {
@@ -123,9 +117,7 @@ fn test_one_chat(path: &Path) {
                 // for now, we send the github comments over IRC when
                 // testing, but we don't encode that into the chat
                 // format
-                expected_result_data.append(&mut "PRIVMSG github-comments :"
-                                                     .bytes()
-                                                     .collect());
+                expected_result_data.append(&mut "PRIVMSG github-comments :".bytes().collect());
                 expected_result_data.extend_from_slice(&line[1 ..]);
                 expected_result_data.append(&mut "\r\n".bytes().collect());
             }
