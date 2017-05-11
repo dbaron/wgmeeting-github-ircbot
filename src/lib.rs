@@ -580,7 +580,7 @@ fn extract_github_url(message: &str,
                       -> (Option<Option<String>>, Option<String>) {
     lazy_static! {
         static ref GITHUB_URL_WHOLE_RE: Regex =
-            Regex::new(r"^https://github.com/(?P<repo>[^/]*/[^/]*)/issues/(?P<number>[0-9]+)(?:#|$)")
+            Regex::new(r"^(?P<issueurl>https://github.com/(?P<repo>[^/]*/[^/]*)/issues/(?P<number>[0-9]+))([#][^ ]*)?$")
             .unwrap();
         static ref GITHUB_URL_PART_RE: Regex =
             Regex::new(r"https://github.com/(?P<repo>[^/]*/[^/]*)/issues/(?P<number>[0-9]+)")
@@ -596,7 +596,7 @@ fn extract_github_url(message: &str,
                    .split_whitespace()
                    .collect::<Vec<&str>>()
                    .contains(&&caps["repo"]) {
-                (Some(Some(maybe_url.clone())), None)
+                (Some(Some(String::from(&caps["issueurl"]))), None)
             } else {
                 (None,
                  Some(format!("I can't comment on that github issue \

@@ -1,0 +1,39 @@
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: line-height
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/3
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I'll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/3.\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :GITHUB TOPIC: https://github.com/dbaron/wgmeeting-github-ircbot/issues/3
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :GITHUB TOPIC: https://github.com/dbaron/wgmeeting-github-ircbot/issues/4
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I'll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/4 instead of https://github.com/dbaron/wgmeeting-github-ircbot/issues/3 like you said before.\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: none
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I won't post this discussion to GitHub.\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/3 extra
+>PRIVMSG #meetingbottest :\u{1}ACTION I can't comment on that because it doesn't look like a github issue to me.\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/3#foo extra
+>PRIVMSG #meetingbottest :\u{1}ACTION I can't comment on that because it doesn't look like a github issue to me.\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Some discussion involving https://github.com/dbaron/wgmeeting-github-ircbot/issues/3
+>PRIVMSG #meetingbottest :\u{1}ACTION Because I don't want to spam github issues unnecessarily, I won't comment in that github issue unless you write "Github topic: <issue-url> | none" (or "Github issue: ...").\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Some discussion involving https://github.com/dbaron/wgmeeting-github-ircbot/issues/3#issuecomment-294101464
+>PRIVMSG #meetingbottest :\u{1}ACTION Because I don't want to spam github issues unnecessarily, I won't comment in that github issue unless you write "Github topic: <issue-url> | none" (or "Github issue: ...").\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github Topic: https://github.com/dbaron/wgmeeting-github-ircbot/issues/3#issuecomment-294101464
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I'll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/3.\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is a simple Test.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, end topic
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/3
+!The CSS Working Group just discussed `line-height`.
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;dbaron> Topic: line-height<br>
+!&lt;dbaron> Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/3<br>
+!&lt;dbaron> GITHUB TOPIC: https://github.com/dbaron/wgmeeting-github-ircbot/issues/3<br>
+!&lt;dbaron> GITHUB TOPIC: https://github.com/dbaron/wgmeeting-github-ircbot/issues/4<br>
+!&lt;dbaron> Github issue: none<br>
+!&lt;dbaron> Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/3 extra<br>
+!&lt;dbaron> Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/3#foo extra<br>
+!&lt;dbaron> Some discussion involving https://github.com/dbaron/wgmeeting-github-ircbot/issues/3<br>
+!&lt;dbaron> Some discussion involving https://github.com/dbaron/wgmeeting-github-ircbot/issues/3#issuecomment-294101464<br>
+!&lt;dbaron> Github Topic: https://github.com/dbaron/wgmeeting-github-ircbot/issues/3#issuecomment-294101464<br>
+!&lt;dbaron> This is a simple Test.<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/3
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/3\u{1}
