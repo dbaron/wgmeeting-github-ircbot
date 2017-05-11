@@ -10,6 +10,7 @@ extern crate log;
 extern crate env_logger;
 extern crate wgmeeting_github_ircbot;
 extern crate irc;
+extern crate diff;
 
 use irc::client::conn::MockConnection;
 use irc::client::prelude::*;
@@ -27,15 +28,20 @@ fn test_chats() {
 
     let chats_dir = Path::new(file!()).parent().unwrap().join("chats");
     info!("Going through {:?}", chats_dir);
+    let mut fail_count = 0;
     for direntry in chats_dir.read_dir().unwrap() {
         if let Ok(direntry) = direntry {
-            test_one_chat(direntry.path().as_path());
+            if !test_one_chat(direntry.path().as_path()) {
+                fail_count += 1;
+            }
         }
     }
+    assert!(fail_count == 0,
+            format!("{} chat test failure(s), see above", fail_count));
 }
 
 #[allow(unused_results)]
-fn test_one_chat(path: &Path) {
+fn test_one_chat(path: &Path) -> bool {
     info!("Testing {:?}", path);
 
     let file_data = {
@@ -153,6 +159,19 @@ fn test_one_chat(path: &Path) {
                             message.as_ref().unwrap());
     }
 
-    assert_eq!(conn.written("UTF-8").unwrap(),
-               str::from_utf8(expected_result_data.as_slice()).unwrap());
+    let actual_str = &*conn.written("UTF-8").unwrap();
+    let expected_str = str::from_utf8(expected_result_data.as_slice()).unwrap();
+    let pass = actual_str == expected_str;
+    println!("\n{:?} {}", path, if pass { "PASS" } else { "FAIL" });
+    if !pass {
+        for d in diff::lines(expected_str, actual_str) {
+            match d {
+                diff::Result::Left(actual) => println!("-{}", actual),
+                diff::Result::Both(actual, _) => println!(" {}", actual),
+                diff::Result::Right(expected) => println!("+{}", expected),
+            }
+        }
+    }
+
+    pass
 }
