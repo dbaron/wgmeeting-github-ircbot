@@ -98,7 +98,11 @@ fn test_one_chat(path: &Path) -> bool {
             Some('<') => {
                 info!("adding line to read buffer: {}",
                       str::from_utf8(line).unwrap());
-                server_read_data.extend_from_slice(&line[1 ..]);
+                // FIXME: Clean up this total hack for \u{1} !
+                let line = str::from_utf8(&line[1 ..])
+                    .unwrap()
+                    .replace("\\u{1}", "\u{1}");
+                server_read_data.extend_from_slice(line.as_bytes());
                 server_read_data.append(&mut "\r\n".bytes().collect());
                 // result_data.extend_from_slice(line);
                 // result_data.append(&mut "\r\n".bytes().collect());
