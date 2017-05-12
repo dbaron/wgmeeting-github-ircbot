@@ -30,7 +30,7 @@ token](https://github.com/settings/tokens) while logged in to the GitHub
 account that you want to make the comments, and put the personal access
 token in the `github_access_token` field in 
 in `./src/config.json`.  Then you can compile and run the bot with a
-single [`cargo`](http://doc.crates.io/) command:
+single [`cargo`](http://doc.crates.io/) command, such as one of:
 
     RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run ./src/config-dev.json
     RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run --release ./src/config.json
