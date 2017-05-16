@@ -1,0 +1,49 @@
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :topic: selectors
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :GitHub topic: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I'll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :fantasai: we should publish a new working draft
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :Rossen: sounds good.  any objections?
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :RESOLVED: publish a new working draft of selectors 4
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :Topic: values 3
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+!The CSS Working Group just discussed `selectors`, and agreed to the following resolutions:
+!
+!* `RESOLVED: publish a new working draft of selectors 4`
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;dael> topic: selectors<br>
+!&lt;dael> GitHub topic: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1<br>
+!&lt;dael> fantasai: we should publish a new working draft<br>
+!&lt;dael> Rossen: sounds good.  any objections?<br>
+!&lt;dael> RESOLVED: publish a new working draft of selectors 4<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :GitHub topic: https://github.com/dbaron/wgmeeting-github-ircbot/issues/2
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I'll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/2.\u{1}
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :fantasai: we should also publish a new working draft of values
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :Rossen: also sounds good. any objections?
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :Proposed RESOLUTION publish a new working draffffft of values 3
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :Resolution: this actually isn't a resolution
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :resolution this actually isn't a resolution
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :RESOLUTION publish a new working draft of values 3
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, end topic?
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/2
+!The CSS Working Group just discussed `values 3`, and agreed to the following resolutions:
+!
+!* `RESOLUTION publish a new working draft of values 3`
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;dael> Topic: values 3<br>
+!&lt;dael> GitHub topic: https://github.com/dbaron/wgmeeting-github-ircbot/issues/2<br>
+!&lt;dael> fantasai: we should also publish a new working draft of values<br>
+!&lt;dael> Rossen: also sounds good. any objections?<br>
+!&lt;dael> Proposed RESOLUTION publish a new working draffffft of values 3<br>
+!&lt;dael> Resolution: this actually isn't a resolution<br>
+!&lt;dael> resolution this actually isn't a resolution<br>
+!&lt;dael> RESOLUTION publish a new working draft of values 3<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/2
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/2\u{1}
