@@ -2,8 +2,8 @@
 #![warn(missing_docs, unused_extern_crates, unused_results)]
 
 //! An IRC bot that posts comments to github when W3C-style IRC minuting is
-//! combined with "Github topic:" or "Github issue:" lines that give the
-//! github issue to comment in.
+//! combined with "Github:", "Github topic:", or "Github issue:" lines that
+//! give the github issue to comment in.
 
 #[macro_use]
 extern crate log;
@@ -212,7 +212,7 @@ fn handle_bot_command<'opts>(server: &IrcServer,
             send_line(None,
                       "I separate discussions by the \"Topic:\" lines, and \
                        I know what github issues to use only by lines of \
-                       the form \"GitHub topic: <url> | none\".");
+                       the form \"GitHub: <url> | none\".");
             send_line(None,
                       &*format!("I'm only allowed to comment on issues in \
                                  the repositories: {}.",
@@ -588,7 +588,8 @@ fn extract_github_url(message: &str,
     }
     let ref allowed_repos = options["github_repos_allowed"];
     if let Some(ref maybe_url) =
-        strip_one_ci_prefix(&message, ["github topic:", "github issue:"].into_iter()) {
+        strip_one_ci_prefix(&message,
+                            ["github:", "github topic:", "github issue:"].into_iter()) {
         if maybe_url.to_lowercase() == "none" {
             (Some(None), None)
         } else if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
@@ -618,8 +619,8 @@ fn extract_github_url(message: &str,
                  Some(String::from("Because I don't want to spam github \
                                     issues unnecessarily, I won't comment \
                                     in that github issue unless you write \
-                                    \"Github topic: <issue-url> | none\" \
-                                    (or \"Github issue: ...\").")))
+                                    \"Github: <issue-url> | none\" \
+                                    (or \"Github issue: ...\"/\"Github topic: ...\"/).")))
             }
         } else {
             (None, None)
