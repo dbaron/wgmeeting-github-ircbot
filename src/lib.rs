@@ -588,7 +588,8 @@ fn extract_github_url(message: &str,
     }
     let ref allowed_repos = options["github_repos_allowed"];
     if let Some(ref maybe_url) =
-        strip_one_ci_prefix(&message, ["github:", "github topic:", "github issue:"].into_iter()) {
+        strip_one_ci_prefix(&message,
+                            ["github:", "github topic:", "github issue:"].into_iter()) {
         if maybe_url.to_lowercase() == "none" {
             (Some(None), None)
         } else if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
