@@ -620,7 +620,7 @@ fn extract_github_url(message: &str,
                                     issues unnecessarily, I won't comment \
                                     in that github issue unless you write \
                                     \"Github: <issue-url> | none\" \
-                                    (or \"Github issue: ...\"/\"Github topic: ...\"/).")))
+                                    (or \"Github issue: ...\"/\"Github topic: ...\").")))
             }
         } else {
             (None, None)
