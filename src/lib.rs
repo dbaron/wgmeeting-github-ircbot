@@ -178,7 +178,7 @@ fn handle_bot_command<'opts>(server: &IrcServer,
             format!("{} version {}, compiled from {}",
                     env!("CARGO_PKG_NAME"),
                     env!("CARGO_PKG_VERSION"),
-                    include_str!(concat!(env!("OUT_DIR"), "/git-hash")));
+                    include_str!(concat!(env!("OUT_DIR"), "/git-hash")).trim_right());
     }
 
     let send_line = |response_username: Option<&str>, line: &str| {
