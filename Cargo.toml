@@ -5,10 +5,10 @@ authors = ["L. David Baron <dbaron@dbaron.org>"]
 build = "build.rs"
 
 [dependencies]
-log = "0.3.7"
-env_logger = "0.4.2"
+log = "0.3.8"
+env_logger = "0.4.3"
 lazy_static = "0.2.8"
-regex = "0.2.1"
+regex = "0.2.2"
 hubcaps = "0.3.12"
 hyper = "0.10.10"
 hyper-native-tls = "0.2.2"
@@ -19,6 +19,6 @@ diff = "0.1.10"
 # irc.w3.org doesn't support SSL, and since it conflicts with the
 # openssl dependency of hyper-native-tls.
 [dependencies.irc]
-version = "0.11.7"
+version = "0.11.8"
 default-features = false
 features = ["ctcp", "encode"]
