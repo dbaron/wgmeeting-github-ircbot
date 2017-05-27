@@ -202,6 +202,9 @@ fn handle_bot_command<'opts>(server: &IrcServer,
             send_line(None,
                       "  end topic - End the current topic without \
                        starting a new one.");
+            send_line(None,
+                      "  reboot - Make me leave the server and exit.  If properly configured, I \
+                       will then update myself and return.");
         }
         "intro" => {
             let config = server.config();
@@ -282,6 +285,31 @@ fn handle_bot_command<'opts>(server: &IrcServer,
                 this_channel_data.end_topic(server);
             } else {
                 send_line(response_username, "'end topic' only works in a channel");
+            }
+        }
+        "reboot" => {
+            let mut channels_with_topics = irc_state
+                .channel_data
+                .iter()
+                .filter_map(|(channel, channel_data)| if channel_data.current_topic.is_some() {
+                                Some(channel)
+                            } else {
+                                None
+                            })
+                .collect::<Vec<_>>();
+            if channels_with_topics.is_empty() {
+                // exit, and assume whatever started the bot will restart it
+                unimplemented!(); // This will exit.  Maybe do something cleaner later?
+            } else {
+                // refuse to reboot
+                channels_with_topics.sort();
+                send_line(response_username,
+                          &*format!("Sorry, I can't reboot right now because I have buffered \
+                                     topics in{}.",
+                                    channels_with_topics
+                                        .iter()
+                                        .flat_map(|s| " ".chars().chain(s.chars()))
+                                        .collect::<String>()));
             }
         }
         _ => {
@@ -595,7 +623,7 @@ fn extract_github_url(message: &str,
         } else if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
             if allowed_repos
                    .split_whitespace()
-                   .collect::<Vec<&str>>()
+                   .collect::<Vec<_>>()
                    .contains(&&caps["repo"]) {
                 (Some(Some(String::from(&caps["issueurl"]))), None)
             } else {
