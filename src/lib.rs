@@ -173,6 +173,14 @@ fn handle_bot_command<'opts>(server: &IrcServer,
                              response_is_action: bool,
                              response_username: Option<&str>) {
 
+    lazy_static! {
+        static ref CODE_DESCRIPTION: String =
+            format!("{} version {}, compiled from {}",
+                    env!("CARGO_PKG_NAME"),
+                    env!("CARGO_PKG_VERSION"),
+                    include_str!(concat!(env!("OUT_DIR"), "/git-hash")));
+    }
+
     let send_line = |response_username: Option<&str>, line: &str| {
         let line_with_nick = match response_username {
             None => String::from(line),
@@ -233,13 +241,9 @@ fn handle_bot_command<'opts>(server: &IrcServer,
         }
         "status" => {
             send_line(response_username,
-                      &*format!("This is {} version {}, compiled from {} \
-                                 which is probably in the repository at \
-                                 https://github.\
-                                 com/dbaron/wgmeeting-github-ircbot/",
-                                env!("CARGO_PKG_NAME"),
-                                env!("CARGO_PKG_VERSION"),
-                                include_str!(concat!(env!("OUT_DIR"), "/git-hash"))));
+                      &*format!("This is {}, which is probably in the repository at \
+                                 https://github.com/dbaron/wgmeeting-github-ircbot/",
+                                *CODE_DESCRIPTION));
             send_line(None, "I currently have data for the following channels:");
             let mut sorted_channels: Vec<&String> = irc_state.channel_data.keys().collect();
             sorted_channels.sort();
@@ -298,6 +302,13 @@ fn handle_bot_command<'opts>(server: &IrcServer,
                             })
                 .collect::<Vec<_>>();
             if channels_with_topics.is_empty() {
+                // quit from the server, with a message
+                server
+                    .send(Command::QUIT(Some(format!("{}, rebooting at request of {}.",
+                                                     *CODE_DESCRIPTION,
+                                                     response_username.unwrap()))))
+                    .unwrap();
+
                 // exit, and assume whatever started the bot will restart it
                 unimplemented!(); // This will exit.  Maybe do something cleaner later?
             } else {
