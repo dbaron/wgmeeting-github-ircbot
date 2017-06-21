@@ -1,6 +1,6 @@
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :topic: selectors
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :GitHub topic: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
->PRIVMSG #meetingbottest :\u{1}ACTION OK, I'll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :fantasai: we should publish a new working draft
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :Rossen: sounds good.  any objections?
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :RESOLVED: publish a new working draft of selectors 4
@@ -21,7 +21,7 @@
 !!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
 >PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :GitHub topic: https://github.com/dbaron/wgmeeting-github-ircbot/issues/2
->PRIVMSG #meetingbottest :\u{1}ACTION OK, I'll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/2.\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/2.\u{1}
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :fantasai: we should also publish a new working draft of values
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :Rossen: also sounds good. any objections?
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :Proposed RESOLUTION publish a new working draffffft of values 3
@@ -40,8 +40,8 @@
 !&lt;dael> fantasai: we should also publish a new working draft of values<br>
 !&lt;dael> Rossen: also sounds good. any objections?<br>
 !&lt;dael> Proposed RESOLUTION publish a new working draffffft of values 3<br>
-!&lt;dael> Resolution: this actually isn't a resolution<br>
-!&lt;dael> resolution this actually isn't a resolution<br>
+!&lt;dael> Resolution: this actually isn\'t a resolution<br>
+!&lt;dael> resolution this actually isn\'t a resolution<br>
 !&lt;dael> RESOLUTION publish a new working draft of values 3<br>
 !</details>
 !

@@ -1,7 +1,7 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/3
->PRIVMSG #meetingbottest :\u{1}ACTION I can't set a github URL because you haven't started a topic.\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION I can\'t set a github URL because you haven\'t started a topic.\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: https://github.com/mozilla/rr/issues/1603
->PRIVMSG #meetingbottest :\u{1}ACTION I can't set a github URL because you haven't started a topic.  Also, I can't comment on that github issue because it's not in a repository I'm allowed to comment on, which are: dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo.\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION I can\'t set a github URL because you haven\'t started a topic.  Also, I can\'t comment on that github issue because it\'s not in a repository I\'m allowed to comment on, which are: dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo.\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: line-height
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: https://github.com/mozilla/rr/issues/1603
->PRIVMSG #meetingbottest :\u{1}ACTION I can't comment on that github issue because it's not in a repository I'm allowed to comment on, which are: dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo.\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION I can\'t comment on that github issue because it\'s not in a repository I\'m allowed to comment on, which are: dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo.\u{1}

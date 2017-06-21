@@ -115,9 +115,7 @@ fn test_one_chat(path: &Path) -> bool {
                 // expected_result_data.extend_from_slice(line);
                 // expected_result_data.append(&mut "\r\n".bytes().collect());
 
-                // FIXME: Clean up this total hack for \u{1} !
-                let mut line = str::from_utf8(line).unwrap().replace("\\u{1}", "\u{1}");
-                expected_result_data.append(&mut line[1 ..].bytes().collect());
+                expected_result_data.extend(str::from_utf8(line).unwrap()[1 ..].bytes());
                 expected_result_data.append(&mut "\r\n".bytes().collect());
             }
             Some('!') => {
@@ -163,7 +161,15 @@ fn test_one_chat(path: &Path) -> bool {
                             message.as_ref().unwrap());
     }
 
-    let actual_str = &*conn.written("UTF-8").unwrap();
+    let actual_str = &*conn.written("UTF-8")
+                           .unwrap()
+                           .split_terminator("\r\n")
+                           .flat_map(|line| {
+                                         line.chars()
+                                             .flat_map(|c| c.escape_default())
+                                             .chain("\r\n".chars())
+                                     })
+                           .collect::<String>();
     let expected_str = str::from_utf8(expected_result_data.as_slice()).unwrap();
     let pass = actual_str == expected_str;
     println!("\n{:?} {}", path, if pass { "PASS" } else { "FAIL" });
