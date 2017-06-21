@@ -1,0 +1,16 @@
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: escaping of issue numbers
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Let's discuss topic #1 and topic #2, related to w3c/csswg-drafts#1024.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: another topic
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+!The CSS Working Group just discussed `escaping of issue numbers`.
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;dbaron> Topic: escaping of issue numbers<br>
+!&lt;dbaron> Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1<br>
+!&lt;dbaron> Let\'s discuss topic #\u{feff}1 and topic #\u{feff}2, related to w3c/csswg-drafts#1024.<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}

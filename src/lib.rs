@@ -439,7 +439,20 @@ fn escape_as_code_span(s: &str) -> String {
 }
 
 fn escape_for_html_block(s: &str) -> String {
-    s.replace("&", "&amp;").replace("<", "&lt;")
+    // Insert a zero width no-break space (U+FEFF, also byte order mark) between
+    // word-starting-# and a digit, so that github doesn't linkify things like "#1"
+    // into links to github issues.
+    //
+    // Do this first, in case we later start doing escaping that produces HTML
+    // numeric character references in decimal.
+    lazy_static! {
+        static ref ISSUE_RE: Regex =
+            Regex::new(r"(?P<space>[[:space:]])[#](?P<number>[0-9])")
+            .unwrap();
+    }
+    let no_issue_links = ISSUE_RE.replace_all(s, "${space}#\u{feff}${number}");
+
+    no_issue_links.replace("&", "&amp;").replace("<", "&lt;")
 }
 
 impl fmt::Display for TopicData {
