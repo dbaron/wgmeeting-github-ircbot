@@ -544,7 +544,7 @@ impl<'opts> ChannelData<'opts> {
         }
         match self.current_topic {
             None => {
-                match extract_github_url(&line.message, self.options, &None) {
+                match extract_github_url(&line.message, self.options, &None, false) {
                     (Some(_), None) => {
                         Some(String::from("I can't set a github URL \
                                            because you haven't started a \
@@ -562,7 +562,7 @@ impl<'opts> ChannelData<'opts> {
             }
             Some(ref mut data) => {
                 let (new_url_option, extract_failure_response) =
-                    extract_github_url(&line.message, self.options, &data.github_url);
+                    extract_github_url(&line.message, self.options, &data.github_url, true);
                 let response = match (new_url_option.as_ref(), &data.github_url) {
                     (None, _) => extract_failure_response,
                     (Some(&None), &None) => None,
@@ -628,7 +628,8 @@ impl<'opts> ChannelData<'opts> {
 ///    will only be present if the first item is None
 fn extract_github_url(message: &str,
                       options: &HashMap<String, String>,
-                      current_github_url: &Option<String>)
+                      current_github_url: &Option<String>,
+                      in_topic: bool)
                       -> (Option<Option<String>>, Option<String>) {
     lazy_static! {
         static ref GITHUB_URL_WHOLE_RE: Regex =
@@ -664,7 +665,7 @@ fn extract_github_url(message: &str,
         }
     } else {
         if let Some(ref rematch) = GITHUB_URL_PART_RE.find(message) {
-            if &Some(String::from(rematch.as_str())) == current_github_url {
+            if &Some(String::from(rematch.as_str())) == current_github_url || !in_topic {
                 (None, None)
             } else {
                 (None,
