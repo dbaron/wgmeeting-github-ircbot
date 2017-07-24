@@ -40,6 +40,18 @@ command (which doesn't require an access token):
 
     RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot,test_chats cargo test
 
+# Do you want this bot for your working group?
+
+If you want this bot for your working group that minutes its
+teleconferences on `irc.w3.org`, I'm happy to take pull requests to this
+repository.  You need to change two things in `src/config.json`:
+
+* the `github_repos_allowed` line, which lists github repositories that
+  the bot is allowed to comment in, and
+* the `channels` line, which lists the IRC channel that the bot joins
+  when it starts.  (`/invite` works for temporary channels, but it
+  doesn't persist across restarting the bot.)
+
 # Acknowledgments
 
 Thanks to Xidorn Quan and Alan Stearns for feature suggestions, and to
