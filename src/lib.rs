@@ -461,7 +461,7 @@ impl fmt::Display for TopicData {
         // the IRC log to avoid most concern about escaping.
         if self.resolutions.len() == 0 {
             try!(write!(f,
-                        "The CSS Working Group just discussed {}.\n",
+                        "The Working Group just discussed {}.\n",
                         if self.topic == "" {
                             String::from("this issue")
                         } else {
@@ -469,7 +469,7 @@ impl fmt::Display for TopicData {
                         }));
         } else {
             try!(write!(f,
-                        "The CSS Working Group just discussed {}, and \
+                        "The Working Group just discussed {}, and \
                          agreed to the following resolutions:\n\n",
                         escape_as_code_span(&*self.topic)));
             for resolution in &self.resolutions {
@@ -588,7 +588,8 @@ impl<'opts> ChannelData<'opts> {
 
                 if !line.is_action {
                     if line.message.starts_with("RESOLUTION") ||
-                       line.message.starts_with("RESOLVED") {
+                       line.message.starts_with("RESOLVED") ||
+                       line.message.starts_with("SUMMARY") {
                         data.resolutions.push(line.message.clone());
                     }
 
