@@ -31,7 +31,9 @@ github: [URL of a GitHub issue]
 
 The bot responds:
 
+```
 * github-bot OK, I'll post this discussion to [URL of the GitHub issue]
+```
 
 Discuss the topic on IRC.
 
@@ -55,7 +57,9 @@ github-bot, end topic
 
 At this point, the github-bot responds:
 
+```
 * github-bot Successfully commented on [URL of the GitHub issue]
+```
 
 The comments that github-bot adds are everything since the last Topic was begun, even if that was before the `github: [URL]` was entered.
 
