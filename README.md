@@ -20,6 +20,45 @@ entering the same topic leading to multiple short or empty comments.)
 scribe.perl conventions, but that's past minimum-viable-product, I
 think.   Though ScribeNick should probably be doable quickly...)
 
+# How to use
+
+Begin a topic on IRC:
+
+```
+Topic: [name of topic]
+github: [URL of a GitHub issue]
+```
+
+The bot responds:
+
+* github-bot OK, I'll post this discussion to [URL of the GitHub issue]
+
+Discuss the topic on IRC.
+
+Add the resolutions:
+
+```
+RESOLVED: frob the snozwuzzle breadth-first
+```
+
+Either begin a new topic:
+
+```
+Topic: Semantics of the gribble
+```
+
+or explictly end the topic:
+
+```
+github-bot, end topic
+```
+
+At this point, the github-bot responds:
+
+* github-bot Successfully commented on [URL of the GitHub issue]
+
+The comments that github-bot adds are everything since the last Topic was begun, even if that was before the `github: [URL]` was entered.
+
 # Development notes
 
 If you don't have Rust installed, start with [rustup](https://rustup.rs/).
