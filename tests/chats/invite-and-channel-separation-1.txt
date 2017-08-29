@@ -12,7 +12,7 @@
 >PRIVMSG #meetingbottest :\u{1}ACTION dbaron, Sorry, I can\'t reboot right now because I have buffered topics in #channel2 #meetingbottest.\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: another topic
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
-!The CSS Working Group just discussed `line-height`.
+!The Working Group just discussed `line-height`.
 !
 !<details><summary>The full IRC log of that discussion</summary>
 !&lt;dbaron> Topic: line-height<br>
@@ -24,7 +24,7 @@
 >PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
 <:user2!~sid755@public.cloak PRIVMSG #channel2 :test-github-bot, end topic
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/7
-!The CSS Working Group just discussed `Topic in second channel`.
+!The Working Group just discussed `Topic in second channel`.
 !
 !<details><summary>The full IRC log of that discussion</summary>
 !&lt;user2> Topic: Topic in second channel<br>

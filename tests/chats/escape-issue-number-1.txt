@@ -4,7 +4,7 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Let's discuss topic #1 and topic #2, related to w3c/csswg-drafts#1024.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: another topic
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
-!The CSS Working Group just discussed `escaping of issue numbers`.
+!The Working Group just discussed `escaping of issue numbers`.
 !
 !<details><summary>The full IRC log of that discussion</summary>
 !&lt;dbaron> Topic: escaping of issue numbers<br>
