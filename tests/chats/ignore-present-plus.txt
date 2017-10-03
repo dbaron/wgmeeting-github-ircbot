@@ -9,7 +9,7 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Please record your present+.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: another topic
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
-!The CSS Working Group just discussed `The first topic of the meeting`.
+!The Working Group just discussed `The first topic of the meeting`.
 !
 !<details><summary>The full IRC log of that discussion</summary>
 !&lt;dbaron> Topic: The first topic of the meeting<br>

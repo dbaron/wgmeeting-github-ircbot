@@ -20,6 +20,49 @@ entering the same topic leading to multiple short or empty comments.)
 scribe.perl conventions, but that's past minimum-viable-product, I
 think.   Though ScribeNick should probably be doable quickly...)
 
+# How to use
+
+Begin a topic on IRC:
+
+```
+Topic: [name of topic]
+github: [URL of a GitHub issue]
+```
+
+The bot responds:
+
+```
+* github-bot OK, I'll post this discussion to [URL of the GitHub issue]
+```
+
+Discuss the topic on IRC.
+
+Add the resolutions:
+
+```
+RESOLVED: frob the snozwuzzle breadth-first
+```
+
+Either begin a new topic:
+
+```
+Topic: Semantics of the gribble
+```
+
+or explictly end the topic:
+
+```
+github-bot, end topic
+```
+
+At this point, the github-bot responds:
+
+```
+* github-bot Successfully commented on [URL of the GitHub issue]
+```
+
+The comments that github-bot adds are everything since the last Topic was begun, even if that was before the `github: [URL]` was entered.
+
 # Development notes
 
 If you don't have Rust installed, start with [rustup](https://rustup.rs/).
@@ -39,6 +82,18 @@ Or you could just run automated tests with a different single `cargo`
 command (which doesn't require an access token):
 
     RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot,test_chats cargo test
+
+# Do you want this bot for your working group?
+
+If you want this bot for your working group that minutes its
+teleconferences on `irc.w3.org`, I'm happy to take pull requests to this
+repository.  You need to change two things in `src/config.json`:
+
+* the `github_repos_allowed` line, which lists github repositories that
+  the bot is allowed to comment in, and
+* the `channels` line, which lists the IRC channel that the bot joins
+  when it starts.  (`/invite` works for temporary channels, but it
+  doesn't persist across restarting the bot.)
 
 # Acknowledgments
 
