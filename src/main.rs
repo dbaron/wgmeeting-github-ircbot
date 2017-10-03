@@ -18,26 +18,27 @@ fn main() {
 
     let config_file = {
         let mut args = env::args_os().skip(1); // skip program name
-        let config_file = args.next()
-            .expect("Expected a single command-line argument, the JSON \
-                     configuration file.");
+        let config_file = args.next().expect(
+            "Expected a single command-line argument, the JSON \
+             configuration file.",
+        );
         if args.next().is_some() {
-            panic!("Expected only a single command-line argument, the JSON \
-                    configuration file.");
+            panic!("Expected only a single command-line argument, the JSON configuration file.");
         }
         config_file
     };
 
-    let server = IrcServer::new(config_file).expect("Couldn't initialize server with given \
-                                                     configuration file");
+    let server = IrcServer::new(config_file).expect(
+        "Couldn't initialize server \
+         with given configuration file",
+    );
 
     server.identify().unwrap();
 
-    let options = server
-        .config()
-        .options
-        .as_ref()
-        .expect("No options property within configuration?");
+    let options = server.config().options.as_ref().expect(
+        "No options property \
+         within configuration?",
+    );
 
     // FIXME: Add a way to ask the bot to reboot itself?
     let mut irc_state = IRCState::new(GithubType::RealGithubConnection);
