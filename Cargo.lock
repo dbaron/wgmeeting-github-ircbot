@@ -1,6 +1,6 @@
 [root]
 name = "wgmeeting_github_ircbot"
-version = "0.2.9"
+version = "0.2.10"
 dependencies = [
  "diff 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
