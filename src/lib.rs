@@ -595,8 +595,10 @@ impl<'opts> ChannelData<'opts> {
 
     // Returns the response that should be sent to the message over IRC.
     fn add_line(&mut self, server: &IrcServer, line: ChannelLine) -> Option<String> {
-        if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
-            self.start_topic(server, topic);
+        if line.is_action == false {
+            if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
+                self.start_topic(server, topic);
+            }
         }
         if line.source == "trackbot" && line.is_action == true &&
             line.message == "is ending a teleconference."
