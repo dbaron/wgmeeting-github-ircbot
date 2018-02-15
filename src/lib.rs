@@ -23,7 +23,6 @@ use hyper_native_tls::NativeTlsClient;
 use irc::client::data::command::Command;
 use irc::client::prelude::*;
 use regex::Regex;
-use std::ascii::AsciiExt;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
