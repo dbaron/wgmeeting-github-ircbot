@@ -7,13 +7,13 @@ build = "build.rs"
 [dependencies]
 log = "0.3.8"
 env_logger = "0.4.3"
-lazy_static = "0.2.8"
-regex = "0.2.2"
+lazy_static = "1.0"
+regex = "0.2"
 hubcaps = "0.3.12"
 hyper = "0.10.10"
 hyper-native-tls = "0.2.2"
-serde_json = "1.0.2"
-diff = "0.1.10"
+serde_json = "1.0"
+diff = "0.1"
 
 # Depend on IRC, but remove its optional openssl dependency, since
 # irc.w3.org doesn't support SSL, and since it conflicts with the
