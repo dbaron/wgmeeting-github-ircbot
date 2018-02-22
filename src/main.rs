@@ -14,7 +14,7 @@ use std::env;
 use wgmeeting_github_ircbot::*;
 
 fn main() {
-    env_logger::init().unwrap();
+    env_logger::init();
 
     let config_file = {
         let mut args = env::args_os().skip(1); // skip program name

@@ -24,7 +24,7 @@ use wgmeeting_github_ircbot::*;
 
 #[test]
 fn test_chats() {
-    env_logger::init().unwrap();
+    env_logger::init();
 
     let chats_dir = Path::new(file!()).parent().unwrap().join("chats");
     info!("Going through {:?}", chats_dir);
