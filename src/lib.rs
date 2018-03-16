@@ -166,8 +166,10 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
 
 fn send_irc_line(server: &IrcServer, target: &str, is_action: bool, line: String) {
     let adjusted_line = if is_action {
+        info!("[{}] > * {}", target, line);
         format!("\x01ACTION {}\x01", line)
     } else {
+        info!("[{}] > {}", target, line);
         line
     };
     server.send_privmsg(target, &*adjusted_line).unwrap();
