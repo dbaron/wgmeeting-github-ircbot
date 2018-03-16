@@ -5,9 +5,9 @@
 //! combined with "Github topic:" or "Github issue:" lines that give the
 //! github issue to comment in.
 
-extern crate wgmeeting_github_ircbot;
 extern crate env_logger;
 extern crate irc;
+extern crate wgmeeting_github_ircbot;
 
 use irc::client::prelude::*;
 use std::env;

@@ -5,12 +5,12 @@
 //! input beginning with <, expected IRC output beginning with >, and expected
 //! github output beginning with !.
 
+extern crate diff;
+extern crate env_logger;
+extern crate irc;
 #[macro_use]
 extern crate log;
-extern crate env_logger;
 extern crate wgmeeting_github_ircbot;
-extern crate irc;
-extern crate diff;
 
 use irc::client::conn::MockConnection;
 use irc::client::prelude::*;
@@ -76,15 +76,11 @@ fn test_one_chat(path: &Path) -> bool {
         options: Some(HashMap::from_iter(vec![
             (
                 format!("source"),
-                format!(
-                    "https://github.com/dbaron/wgmeeting-github-ircbot"
-                )
+                format!("https://github.com/dbaron/wgmeeting-github-ircbot"),
             ),
             (
                 format!("github_repos_allowed"),
-                format!(
-                    "dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo"
-                )
+                format!("dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo"),
             ),
         ])),
         ..Default::default()
@@ -114,10 +110,9 @@ fn test_one_chat(path: &Path) -> bool {
                     str::from_utf8(line).unwrap()
                 );
                 // FIXME: Clean up this total hack for \u{1} !
-                let line = str::from_utf8(&line[1 ..]).unwrap().replace(
-                    "\\u{1}",
-                    "\u{1}",
-                );
+                let line = str::from_utf8(&line[1..])
+                    .unwrap()
+                    .replace("\\u{1}", "\u{1}");
                 server_read_data.extend_from_slice(line.as_bytes());
                 server_read_data.append(&mut "\r\n".bytes().collect());
                 // result_data.extend_from_slice(line);
@@ -133,7 +128,7 @@ fn test_one_chat(path: &Path) -> bool {
                 // expected_result_data.extend_from_slice(line);
                 // expected_result_data.append(&mut "\r\n".bytes().collect());
 
-                expected_result_data.extend(str::from_utf8(line).unwrap()[1 ..].bytes());
+                expected_result_data.extend(str::from_utf8(line).unwrap()[1..].bytes());
                 expected_result_data.append(&mut "\r\n".bytes().collect());
             }
             Some('!') => {
@@ -146,7 +141,7 @@ fn test_one_chat(path: &Path) -> bool {
                 // testing, but we don't encode that into the chat
                 // format
                 expected_result_data.append(&mut "PRIVMSG github-comments :".bytes().collect());
-                expected_result_data.extend_from_slice(&line[1 ..]);
+                expected_result_data.extend_from_slice(&line[1..]);
                 expected_result_data.append(&mut "\r\n".bytes().collect());
             }
             _ => {
@@ -188,9 +183,9 @@ fn test_one_chat(path: &Path) -> bool {
         .unwrap()
         .split_terminator("\r\n")
         .flat_map(|line| {
-            line.chars().flat_map(|c| c.escape_default()).chain(
-                "\r\n".chars(),
-            )
+            line.chars()
+                .flat_map(|c| c.escape_default())
+                .chain("\r\n".chars())
         })
         .collect::<String>();
     let expected_str = str::from_utf8(expected_result_data.as_slice()).unwrap();
