@@ -19,6 +19,6 @@ diff = "0.1"
 # irc.w3.org doesn't support SSL, and since it conflicts with the
 # openssl dependency of hyper-native-tls.
 [dependencies.irc]
-version = "0.11.8"
+version = "0.11" # should upgrade to 0.13
 default-features = false
 features = ["ctcp", "encode"]
