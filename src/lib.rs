@@ -812,15 +812,14 @@ impl GithubCommentTask {
                         let comments = issue.comments();
 
                         let err = comments.create(&CommentOptions { body: comment_text });
-                        let mut response = format!(
-                            "{} on {}",
-                            if err.is_ok() {
-                                "Successfully commented"
-                            } else {
-                                "UNABLE TO COMMENT"
-                            },
-                            github_url
-                        );
+                        let mut response = if err.is_ok() {
+                            format!("Successfully commented on {}", github_url)
+                        } else {
+                            format!(
+                                "UNABLE TO COMMENT on {} due to error: {:?}",
+                                github_url, err
+                            )
+                        };
 
                         if self.data.resolutions.len() > 0 {
                             // We had resolutions, so remove the "Agenda+" and
