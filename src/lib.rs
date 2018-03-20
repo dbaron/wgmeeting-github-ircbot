@@ -688,10 +688,10 @@ fn extract_github_url(
 ) -> (Option<Option<String>>, Option<String>) {
     lazy_static! {
         static ref GITHUB_URL_WHOLE_RE: Regex =
-            Regex::new(r"^(?P<issueurl>https://github.com/(?P<repo>[^/]*/[^/]*)/issues/(?P<number>[0-9]+))([#][^ ]*)?$")
+            Regex::new(r"^(?P<issueurl>https://github.com/(?P<repo>[^/]*/[^/]*)/(issues|pull)/(?P<number>[0-9]+))([#][^ ]*)?$")
             .unwrap();
         static ref GITHUB_URL_PART_RE: Regex =
-            Regex::new(r"https://github.com/(?P<repo>[^/]*/[^/]*)/issues/(?P<number>[0-9]+)")
+            Regex::new(r"https://github.com/(?P<repo>[^/]*/[^/]*)/(issues|pull)/(?P<number>[0-9]+)")
             .unwrap();
     }
     let ref allowed_repos = options["github_repos_allowed"];
@@ -797,7 +797,7 @@ impl GithubCommentTask {
     fn main(&self) {
         lazy_static! {
             static ref GITHUB_URL_RE: Regex =
-                Regex::new(r"^https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/issues/(?P<number>[0-9]+)$")
+                Regex::new(r"^https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(?P<type>(issues|pull))/(?P<number>[0-9]+)$")
                 .unwrap();
         }
 
@@ -808,10 +808,16 @@ impl GithubCommentTask {
                     Some(ref github) => {
                         let repo =
                             github.repo(String::from(&caps["owner"]), String::from(&caps["repo"]));
-                        let issue = repo.issue(caps["number"].parse::<u64>().unwrap());
-                        let comments = issue.comments();
+                        let num = caps["number"].parse::<u64>().unwrap();
+                        // FIXME: share this better (without making the
+                        // borrow checker object)!
+                        let commentopts = &CommentOptions { body: comment_text };
+                        let err = match &(caps["type"]) {
+                            "issues" => repo.issue(num).comments().create(commentopts),
+                            "pull" => repo.pulls().get(num).comments().create(commentopts),
+                            _ => panic!("the regexp should not have allowed this"),
+                        };
 
-                        let err = comments.create(&CommentOptions { body: comment_text });
                         let mut response = if err.is_ok() {
                             format!("Successfully commented on {}", github_url)
                         } else {
@@ -821,9 +827,12 @@ impl GithubCommentTask {
                             )
                         };
 
-                        if self.data.resolutions.len() > 0 {
+                        if self.data.resolutions.len() > 0 && &(caps["type"]) == "issues" {
                             // We had resolutions, so remove the "Agenda+" and
                             // "Agenda+ F2F" tags, if present.
+                            // FIXME: Do this for pulls too, once
+                            // hubcaps gives access to labels on a pull
+                            // request.
 
                             // Explicitly discard any errors.  That's because
                             // this
@@ -834,6 +843,7 @@ impl GithubCommentTask {
                             // so we
                             // really ought to distinguish, and report the
                             // latter.
+                            let issue = repo.issue(num);
                             let labels = issue.labels();
                             for label in ["Agenda+", "Agenda+ F2F"].into_iter() {
                                 if labels.remove(label).is_ok() {
