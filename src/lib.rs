@@ -822,6 +822,7 @@ impl GithubCommentTask {
                             format!("Successfully commented on {}", github_url)
                         } else {
                             format!(
+                                // FIXME: Remove newlines *and backtrace* from err.
                                 "UNABLE TO COMMENT on {} due to error: {:?}",
                                 github_url, err
                             )
