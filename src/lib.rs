@@ -183,6 +183,20 @@ fn send_irc_line(irc: &IrcClient, target: &str, is_action: bool, line: String) {
     irc.send_privmsg(target, &*adjusted_line).unwrap();
 }
 
+/// Return the description used by the bot to describe its own version and
+/// commit hash.  Public only because the test code needs access to it, in
+/// order to expect the right string.
+pub fn code_description() -> &'static String {
+    lazy_static! {
+        static ref CODE_DESCRIPTION: String =
+            format!("{} version {}, compiled from {}",
+                    env!("CARGO_PKG_NAME"),
+                    env!("CARGO_PKG_VERSION"),
+                    include_str!(concat!(env!("OUT_DIR"), "/git-hash")).trim_right());
+    }
+    &CODE_DESCRIPTION
+}
+
 fn handle_bot_command<'opts>(
     irc: &IrcClient,
     options: &'opts HashMap<String, String>,
@@ -192,14 +206,6 @@ fn handle_bot_command<'opts>(
     response_is_action: bool,
     response_username: Option<&str>,
 ) {
-    lazy_static! {
-        static ref CODE_DESCRIPTION: String =
-            format!("{} version {}, compiled from {}",
-                    env!("CARGO_PKG_NAME"),
-                    env!("CARGO_PKG_VERSION"),
-                    include_str!(concat!(env!("OUT_DIR"), "/git-hash")).trim_right());
-    }
-
     let send_line = |response_username: Option<&str>, line: &str| {
         let line_with_nick = match response_username {
             None => String::from(line),
@@ -276,7 +282,7 @@ fn handle_bot_command<'opts>(
                 &*format!(
                     "This is {}, which is probably in the repository at \
                      https://github.com/dbaron/wgmeeting-github-ircbot/",
-                    *CODE_DESCRIPTION
+                    &*code_description()
                 ),
             );
             send_line(None, "I currently have data for the following channels:");
@@ -346,7 +352,7 @@ fn handle_bot_command<'opts>(
                 // quit from the server, with a message
                 irc.send(Command::QUIT(Some(format!(
                     "{}, rebooting at request of {}.",
-                    *CODE_DESCRIPTION,
+                    &*code_description(),
                     response_username.unwrap()
                 )))).unwrap();
 

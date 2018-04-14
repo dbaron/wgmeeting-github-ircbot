@@ -183,7 +183,12 @@ fn test_one_chat(path: &Path) -> bool {
                                 "adding line to expected results: {}",
                                 str::from_utf8(line).unwrap()
                             );
-                            expected_lines.extend_from_slice(line);
+                            expected_lines.extend(
+                                str::from_utf8(line)
+                                    .unwrap()
+                                    .replace("[[CODE_DESCRIPTION]]", &*code_description())
+                                    .bytes(),
+                            );
                             expected_lines.append(&mut "\r\n".bytes().collect());
                         }
                         Some('!') => {
