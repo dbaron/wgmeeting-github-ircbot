@@ -5,28 +5,34 @@
 //! combined with "Github:", "Github topic:", or "Github issue:" lines that
 //! give the github issue to comment in.
 
+extern crate futures;
 extern crate hubcaps;
 extern crate hyper;
-extern crate hyper_native_tls;
+extern crate hyper_tls;
 extern crate irc;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
 extern crate regex;
+extern crate tokio_core;
 
+use futures::prelude::*;
+use futures::future::ok;
+use hyper::client::HttpConnector;
+use hyper_tls::HttpsConnector;
 use hubcaps::{Credentials, Github};
 use hubcaps::comments::CommentOptions;
-use hyper::Client;
-use hyper::net::HttpsConnector;
-use hyper_native_tls::NativeTlsClient;
-use irc::client::data::command::Command;
-use irc::client::prelude::*;
+use irc::client::Client;
+use irc::client::ext::ClientExt;
+use irc::client::prelude::{Command, IrcClient};
+use irc::proto::message::Message;
+use tokio_core::reactor::Handle;
 use regex::Regex;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
-use std::thread;
+use std::iter;
 
 #[derive(Copy, Clone)]
 /// Whether to use a real github connection for real use of the bot, or a fake
@@ -38,13 +44,13 @@ pub enum GithubType {
     MockGithubConnection,
 }
 
-/// Run the main loop of the bot, given an IRC server (with a real or mock
-/// connection).
-pub fn main_loop_iteration<'opts>(
-    server: IrcServer,
+/// Run an iteration of the main loop of the bot, given an IRC server
+/// (with a real or mock / connection).
+pub fn process_irc_message<'opts>(
+    irc: &IrcClient,
     irc_state: &mut IRCState<'opts>,
     options: &'opts HashMap<String, String>,
-    message: &Message,
+    message: Message,
 ) {
     match message.command {
         Command::PRIVMSG(ref target, ref msg) => {
@@ -70,12 +76,12 @@ pub fn main_loop_iteration<'opts>(
                             message: filter_bot_hidden(msg),
                         }
                     };
-                    let mynick = server.current_nickname();
+                    let mynick = irc.current_nickname();
                     if target == mynick {
                         // An actual private message.
                         info!("[{}] {}", source, line);
                         handle_bot_command(
-                            &server,
+                            &irc,
                             options,
                             irc_state,
                             &line.message,
@@ -88,7 +94,7 @@ pub fn main_loop_iteration<'opts>(
                         info!("[{}] {}", target, line);
                         match check_command_in_channel(mynick, &line.message) {
                             Some(ref command) => handle_bot_command(
-                                &server,
+                                &irc,
                                 options,
                                 irc_state,
                                 command,
@@ -98,11 +104,13 @@ pub fn main_loop_iteration<'opts>(
                             ),
                             None => {
                                 if !is_present_plus(&*line.message) {
+                                    // FIXME: refactor away clone
+                                    let event_loop = irc_state.event_loop.clone();
                                     let this_channel_data = irc_state.channel_data(target, options);
                                     if let Some(response) =
-                                        this_channel_data.add_line(&server, line)
+                                        this_channel_data.add_line(&irc, event_loop, line)
                                     {
-                                        send_irc_line(&server, target, true, response);
+                                        send_irc_line(&irc, target, true, response);
                                     }
                                 }
                             }
@@ -118,9 +126,9 @@ pub fn main_loop_iteration<'opts>(
             }
         }
         Command::INVITE(ref target, ref channel) => {
-            if target == server.current_nickname() {
+            if target == irc.current_nickname() {
                 // Join channels when invited.
-                server.send_join(channel).unwrap();
+                irc.send_join(channel).unwrap();
             }
         }
         _ => (),
@@ -164,7 +172,7 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
     Some(String::from(after_punct.trim_left()))
 }
 
-fn send_irc_line(server: &IrcServer, target: &str, is_action: bool, line: String) {
+fn send_irc_line(irc: &IrcClient, target: &str, is_action: bool, line: String) {
     let adjusted_line = if is_action {
         info!("[{}] > * {}", target, line);
         format!("\x01ACTION {}\x01", line)
@@ -172,11 +180,11 @@ fn send_irc_line(server: &IrcServer, target: &str, is_action: bool, line: String
         info!("[{}] > {}", target, line);
         line
     };
-    server.send_privmsg(target, &*adjusted_line).unwrap();
+    irc.send_privmsg(target, &*adjusted_line).unwrap();
 }
 
 fn handle_bot_command<'opts>(
-    server: &IrcServer,
+    irc: &IrcClient,
     options: &'opts HashMap<String, String>,
     irc_state: &mut IRCState<'opts>,
     command: &str,
@@ -197,7 +205,7 @@ fn handle_bot_command<'opts>(
             None => String::from(line),
             Some(username) => String::from(username) + ", " + line,
         };
-        send_irc_line(server, response_target, response_is_action, line_with_nick);
+        send_irc_line(irc, response_target, response_is_action, line_with_nick);
     };
 
     // Remove a question mark at the end of the command if it exists
@@ -231,7 +239,7 @@ fn handle_bot_command<'opts>(
             );
         }
         "intro" => {
-            let config = server.config();
+            let config = irc.config();
             send_line(
                 None,
                 "My job is to leave comments in github when the group discusses github issues and \
@@ -299,25 +307,25 @@ fn handle_bot_command<'opts>(
         }
         "bye" => {
             if response_target.starts_with('#') {
+                let event_loop = irc_state.event_loop.clone(); // FIXME: refactor away clone
                 let this_channel_data = irc_state.channel_data(response_target, options);
-                this_channel_data.end_topic(server);
-                server
-                    .send(Command::PART(
-                        String::from(response_target),
-                        Some(format!(
-                            "Leaving at request of {}.  Feel free to /invite me back.",
-                            response_username.unwrap()
-                        )),
-                    ))
-                    .unwrap();
+                this_channel_data.end_topic(irc, event_loop);
+                irc.send(Command::PART(
+                    String::from(response_target),
+                    Some(format!(
+                        "Leaving at request of {}.  Feel free to /invite me back.",
+                        response_username.unwrap()
+                    )),
+                )).unwrap();
             } else {
                 send_line(response_username, "'bye' only works in a channel");
             }
         }
         "end topic" => {
             if response_target.starts_with('#') {
+                let event_loop = irc_state.event_loop.clone(); // FIXME: refactor away clone
                 let this_channel_data = irc_state.channel_data(response_target, options);
-                this_channel_data.end_topic(server);
+                this_channel_data.end_topic(irc, event_loop);
             } else {
                 send_line(response_username, "'end topic' only works in a channel");
             }
@@ -336,13 +344,11 @@ fn handle_bot_command<'opts>(
                 .collect::<Vec<_>>();
             if channels_with_topics.is_empty() {
                 // quit from the server, with a message
-                server
-                    .send(Command::QUIT(Some(format!(
-                        "{}, rebooting at request of {}.",
-                        *CODE_DESCRIPTION,
-                        response_username.unwrap()
-                    ))))
-                    .unwrap();
+                irc.send(Command::QUIT(Some(format!(
+                    "{}, rebooting at request of {}.",
+                    *CODE_DESCRIPTION,
+                    response_username.unwrap()
+                )))).unwrap();
 
                 // exit, and assume whatever started the bot will restart it
                 unimplemented!(); // This will exit.  Maybe do something cleaner later?
@@ -375,14 +381,16 @@ fn handle_bot_command<'opts>(
 pub struct IRCState<'opts> {
     channel_data: HashMap<String, ChannelData<'opts>>,
     github_type: GithubType,
+    event_loop: Handle,
 }
 
 impl<'opts> IRCState<'opts> {
     /// Create an empty IRCState.
-    pub fn new(github_type_: GithubType) -> IRCState<'opts> {
+    pub fn new(github_type_: GithubType, event_loop_: &Handle) -> IRCState<'opts> {
         IRCState {
             channel_data: HashMap::new(),
             github_type: github_type_,
+            event_loop: event_loop_.clone(),
         }
     }
 
@@ -586,17 +594,21 @@ impl<'opts> ChannelData<'opts> {
     }
 
     // Returns the response that should be sent to the message over IRC.
-    fn add_line(&mut self, server: &IrcServer, line: ChannelLine) -> Option<String> {
-        if line.is_action == false {
-            if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
-                self.start_topic(server, topic);
-            }
-        }
-        if line.source == "trackbot" && line.is_action == true
-            && line.message == "is ending a teleconference."
-        {
-            self.end_topic(server);
-        }
+    // FIXME: Move this to be a method on IRCState.
+    fn add_line(
+        &mut self,
+        irc: &IrcClient,
+        event_loop: Handle,
+        line: ChannelLine,
+    ) -> Option<String> {
+        match line.is_action {
+            false => if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
+                self.start_topic(irc, event_loop, topic);
+            },
+            true => if line.source == "trackbot" && line.message == "is ending a teleconference." {
+                self.end_topic(irc, event_loop);
+            },
+        };
         match self.current_topic {
             None => match extract_github_url(&line.message, self.options, &None, false) {
                 (Some(_), None) => Some(String::from(
@@ -652,17 +664,20 @@ impl<'opts> ChannelData<'opts> {
         }
     }
 
-    fn start_topic(&mut self, server: &IrcServer, topic: &str) {
-        self.end_topic(server);
+    // FIXME: Move this to be a method on IRCState.
+    fn start_topic(&mut self, irc: &IrcClient, event_loop: Handle, topic: &str) {
+        self.end_topic(irc, event_loop);
         self.current_topic = Some(TopicData::new(topic));
     }
 
-    fn end_topic(&mut self, server: &IrcServer) {
+    // FIXME: Move this to be a method on IRCState.
+    fn end_topic(&mut self, irc: &IrcClient, event_loop: Handle) {
         // TODO: Test the topic boundary code.
         if let Some(topic) = self.current_topic.take() {
             if topic.github_url.is_some() {
                 let task = GithubCommentTask::new(
-                    server,
+                    irc,
+                    event_loop,
                     &*self.channel_name,
                     topic,
                     self.options,
@@ -750,15 +765,18 @@ fn extract_github_url(
 
 struct GithubCommentTask {
     // a clone of the IRCServer is OK, because it reference-counts almost all of its internals
-    server: IrcServer,
+    irc: IrcClient,
     response_target: String,
     data: TopicData,
-    github: Option<Github>, // None means we're mocking the connection
+    github: Option<Github<HttpsConnector<HttpConnector>>>, /* None means we're mocking the
+                                                            * connection */
+    event_loop: Handle,
 }
 
 impl GithubCommentTask {
     fn new(
-        server_: &IrcServer,
+        irc_: &IrcClient,
+        event_loop_: Handle,
         response_target_: &str,
         data_: TopicData,
         options: &HashMap<String, String>,
@@ -767,34 +785,25 @@ impl GithubCommentTask {
         let github_ = match github_type_ {
             GithubType::RealGithubConnection => Some(Github::new(
                 &*options["github_uastring"],
-                Client::with_connector(HttpsConnector::new(NativeTlsClient::new().unwrap())),
-                Credentials::Token(options["github_access_token"].clone()),
+                Some(Credentials::Token(options["github_access_token"].clone())),
+                &event_loop_,
             )),
             GithubType::MockGithubConnection => None,
         };
         GithubCommentTask {
-            server: server_.clone(),
+            irc: irc_.clone(),
             response_target: String::from(response_target_),
             data: data_,
             github: github_,
+            event_loop: event_loop_,
         }
     }
 
-    #[allow(unused_results)]
     fn run(self) {
+        // FIXME: do this again?
         // For real github connections, run on another thread, but for fake
         // ones, run synchronously to make testing easier.
-        match self.github {
-            Some(_) => {
-                thread::spawn(move || {
-                    self.main();
-                });
-            }
-            None => self.main(),
-        }
-    }
 
-    fn main(&self) {
         lazy_static! {
             static ref GITHUB_URL_RE: Regex =
                 Regex::new(r"^https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(?P<type>(issues|pull))/(?P<number>[0-9]+)$")
@@ -804,7 +813,13 @@ impl GithubCommentTask {
         if let Some(ref github_url) = self.data.github_url {
             if let Some(ref caps) = GITHUB_URL_RE.captures(github_url) {
                 let comment_text = format!("{}", self.data);
-                let response = match self.github {
+
+                let send_response_irc = self.irc.clone();
+                let send_response_target = self.response_target.clone();
+                let send_response = move |response: String| {
+                    send_irc_line(&send_response_irc, &*send_response_target, true, response);
+                };
+                match self.github {
                     Some(ref github) => {
                         let repo =
                             github.repo(String::from(&caps["owner"]), String::from(&caps["repo"]));
@@ -812,22 +827,24 @@ impl GithubCommentTask {
                         // FIXME: share this better (without making the
                         // borrow checker object)!
                         let commentopts = &CommentOptions { body: comment_text };
-                        let err = match &(caps["type"]) {
+                        let github_url_for_response = github_url.clone();
+                        let comment_task = match &(caps["type"]) {
                             "issues" => repo.issue(num).comments().create(commentopts),
                             "pull" => repo.pulls().get(num).comments().create(commentopts),
                             _ => panic!("the regexp should not have allowed this"),
-                        };
+                        }.then(move |result| {
+                            ok::<String, ()>(match result {
+                                Ok(_) => {
+                                    format!("Successfully commented on {}", github_url_for_response)
+                                }
+                                Err(err) => format!(
+                                    /* FIXME: Remove newlines *and backtrace* from err. */ "UNABLE TO COMMENT on {} due to error: {:?}",
+                                    github_url_for_response, err
+                                ),
+                            })
+                        });
 
-                        let mut response = if err.is_ok() {
-                            format!("Successfully commented on {}", github_url)
-                        } else {
-                            format!(
-                                // FIXME: Remove newlines *and backtrace* from err.
-                                "UNABLE TO COMMENT on {} due to error: {:?}",
-                                github_url, err
-                            )
-                        };
-
+                        let mut label_tasks = Vec::new();
                         if self.data.resolutions.len() > 0 && &(caps["type"]) == "issues" {
                             // We had resolutions, so remove the "Agenda+" and
                             // "Agenda+ F2F" tags, if present.
@@ -836,37 +853,42 @@ impl GithubCommentTask {
                             // request.
 
                             // Explicitly discard any errors.  That's because
-                            // this
-                            // might give an error if the label isn't present.
+                            // this might give an error if the label isn't
+                            // present.
                             // FIXME:  But it might also give a (different)
-                            // error if
-                            // we don't have write access to the repository,
-                            // so we
-                            // really ought to distinguish, and report the
-                            // latter.
+                            // error if we don't have write access to the
+                            // repository, so we really ought to distinguish,
+                            // and report the latter.
                             let issue = repo.issue(num);
                             let labels = issue.labels();
                             for label in ["Agenda+", "Agenda+ F2F"].into_iter() {
-                                if labels.remove(label).is_ok() {
-                                    response.push_str(&*format!(
-                                        " and removed the \"{}\" label",
-                                        label
-                                    ));
-                                }
+                                let success_str = format!(" and removed the \"{}\" label", label);
+                                label_tasks.push(labels.remove(label).then(|result| {
+                                    ok(match result {
+                                        Ok(_) => success_str,
+                                        Err(_) => String::from(""),
+                                    })
+                                }));
                             }
                         }
-                        response
+
+                        self.event_loop.spawn(
+                            comment_task
+                                .join(futures::future::join_all(label_tasks))
+                                .map(|(comment_msg, label_msg_vec)| {
+                                    iter::once(&comment_msg)
+                                        .chain(label_msg_vec.iter())
+                                        .flat_map(|s| s.chars())
+                                        .collect::<String>()
+                                })
+                                .map(move |s| send_response(s)),
+                        );
                     }
                     None => {
                         // Mock the github comments by sending them over IRC
                         // to a fake user called github-comments.
                         let send_github_comment_line = |line: &str| {
-                            send_irc_line(
-                                &self.server,
-                                "github-comments",
-                                false,
-                                String::from(line),
-                            )
+                            send_irc_line(&self.irc, "github-comments", false, String::from(line))
                         };
                         send_github_comment_line(
                             format!("!BEGIN GITHUB COMMENT IN {}", github_url).as_str(),
@@ -877,11 +899,9 @@ impl GithubCommentTask {
                         send_github_comment_line(
                             format!("!END GITHUB COMMENT IN {}", github_url).as_str(),
                         );
-                        format!("{} on {}", "Successfully commented", github_url)
+                        send_response(format!("{} on {}", "Successfully commented", github_url));
                     }
                 };
-
-                send_irc_line(&self.server, &*self.response_target, true, response);
             } else {
                 warn!(
                     "How does {} fail to match now when it matched before?",

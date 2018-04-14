@@ -1,24 +1,26 @@
 [package]
 name = "wgmeeting_github_ircbot"
-version = "0.2.12"
+version = "0.3.0"
 authors = ["L. David Baron <dbaron@dbaron.org>"]
 build = "build.rs"
 
 [dependencies]
+futures = "0.1"
 log = "0.4"
 env_logger = "0.5"
 lazy_static = "1.0"
 regex = "0.2"
-hubcaps = "0.3" # should upgrade to 0.4
-hyper = "0.10" # should upgrade to 0.11
-hyper-native-tls = "0.2"
+tokio-core = "0.1" # should upgrade from tokio-core to tokio once hubcaps supports it
+tokio-io = "0.1"
+tokio-timer = "0.1"
+hubcaps = "0.4"
+hyper = "0.11"
+hyper-tls = "0.1"
 serde_json = "1.0"
 diff = "0.1"
 
-# Depend on IRC, but remove its optional openssl dependency, since
-# irc.w3.org doesn't support SSL, and since it conflicts with the
-# openssl dependency of hyper-native-tls.
 [dependencies.irc]
-version = "0.11" # should upgrade to 0.13
+version = "0.13"
 default-features = false
-features = ["ctcp", "encode"]
+features = ["ctcp", "json"]
+
