@@ -173,14 +173,48 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
 }
 
 fn send_irc_line(irc: &IrcClient, target: &str, is_action: bool, line: String) {
-    let adjusted_line = if is_action {
-        info!("[{}] > * {}", target, line);
-        format!("\x01ACTION {}\x01", line)
-    } else {
-        info!("[{}] > {}", target, line);
-        line
-    };
-    irc.send_privmsg(target, &*adjusted_line).unwrap();
+    // We can't send an IRC message longer than 512 characters.  This includes
+    // the "PRIVMSG" and the spaces between the parts.  If we fail to do this,
+    // the server might disconnect us with "Request too long", or for messages
+    // slightly under the longer threshold, might cut the ends of the messages
+    // when sending them onwards to other clients.
+    // Test the loop condition at the end so we transmit an empty line if
+    // given one.  (This is important at least for the tests, which use IRC
+    // messages to simulate the github comments.  It probably isn't important
+    // for anything else.)
+    let max_length = 463 - 8 - target.len() - (if is_action { 9 } else { 0 });
+    let mut segment_start = 0;
+    loop {
+        let segment_end = if line.len() - segment_start <= max_length {
+            line.len()
+        } else {
+            let mut byte_starting_char = segment_start + max_length;
+            let bytes = line.as_bytes();
+            while bytes[byte_starting_char] & 0b_1100_0000_u8 == 0b_1000_0000_u8 {
+                // We found a UTF-8 continuation byte, so shorten.
+                byte_starting_char = byte_starting_char - 1;
+            }
+            byte_starting_char
+        };
+
+        let slice =
+            String::from_utf8(line.as_bytes()[segment_start..segment_end].to_vec()).unwrap();
+
+        let adjusted_slice = if is_action {
+            info!("[{}] > * {}", target, slice);
+            format!("\x01ACTION {}\x01", slice)
+        } else {
+            info!("[{}] > {}", target, slice);
+            slice
+        };
+        irc.send_privmsg(target, &*adjusted_slice).unwrap();
+
+        segment_start = segment_end;
+
+        if segment_start >= line.len() {
+            break;
+        }
+    }
 }
 
 /// Return the description used by the bot to describe its own version and
