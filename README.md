@@ -83,6 +83,10 @@ command (which doesn't require an access token):
 
     RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot,test_chats cargo test
 
+or for more verbosity:
+
+    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot,test_chats,tokio_core,tokio_reactor cargo test
+
 # Do you want this bot for your working group?
 
 If you want this bot for your working group that minutes its
