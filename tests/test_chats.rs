@@ -10,6 +10,8 @@ extern crate env_logger;
 extern crate futures;
 extern crate irc;
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate log;
 extern crate tokio_core;
 extern crate tokio_io;
@@ -229,56 +231,55 @@ fn test_one_chat(path: &Path) -> bool {
     // Note that this leaves the initial '<' in the line.
     let lines_to_write_stream = file_data_stream.filter(|line| line.first() == Some(&('<' as u8)));
 
-    let irc_config: Config = Config {
-        use_mock_connection: Some(false),
-        owners: Some(vec![format!("dbaron")]),
-        nickname: Some(format!("test-github-bot")),
-        alt_nicks: Some(vec![
-            format!("test-github-bot-"),
-            format!("test-github-bot--"),
-        ]),
-        username: Some(format!("dbaron-gh-bot")),
-        realname: Some(format!("Bot to add meeting minutes to github issues.")),
-        server: Some(format!("127.0.0.1")),
-        port: Some(43210),
-        use_ssl: Some(false),
-        encoding: Some(format!("UTF-8")),
-        channels: Some(vec![format!("#meetingbottest")]),
-        user_info: Some(format!("Bot to add meeting minutes to github issues.")),
+    lazy_static! {
+        static ref IRC_CONFIG: Config = Config {
+            use_mock_connection: Some(false),
+            owners: Some(vec![format!("dbaron")]),
+            nickname: Some(format!("test-github-bot")),
+            alt_nicks: Some(vec![
+                format!("test-github-bot-"),
+                format!("test-github-bot--"),
+            ]),
+            username: Some(format!("dbaron-gh-bot")),
+            realname: Some(format!("Bot to add meeting minutes to github issues.")),
+            server: Some(format!("127.0.0.1")),
+            port: Some(43210),
+            use_ssl: Some(false),
+            encoding: Some(format!("UTF-8")),
+            channels: Some(vec![format!("#meetingbottest")]),
+            user_info: Some(format!("Bot to add meeting minutes to github issues.")),
 
-        // In testing mode, we send the github comments as IRC messages, so we
-        // need to be able to handle more substantial bursts of messages
-        // without delay.
-        burst_window_length: Some(0),
-        max_messages_in_burst: Some(50),
+            // In testing mode, we send the github comments as IRC messages, so we
+            // need to be able to handle more substantial bursts of messages
+            // without delay.
+            burst_window_length: Some(0),
+            max_messages_in_burst: Some(50),
 
-        // FIXME: why doesn't this work as documented?
-        // source: Some(format!("https://github.
-        // com/dbaron/wgmeeting-github-ircbot")),
-        options: Some(HashMap::from_iter(vec![
-            (
-                format!("source"),
-                format!("https://github.com/dbaron/wgmeeting-github-ircbot"),
-            ),
-            (
-                format!("github_repos_allowed"),
-                format!("dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo"),
-            ),
-        ])),
-        ..Default::default()
-    };
-    let options = irc_config.options.as_ref().expect(
-        "No options property \
-         within configuration?",
-    );
+            // FIXME: why doesn't this work as documented?
+            // source: Some(format!("https://github.
+            // com/dbaron/wgmeeting-github-ircbot")),
+            options: Some(HashMap::from_iter(vec![
+                (
+                    format!("source"),
+                    format!("https://github.com/dbaron/wgmeeting-github-ircbot"),
+                ),
+                (
+                    format!("github_repos_allowed"),
+                    format!("dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo"),
+                ),
+            ])),
+            ..Default::default()
+        };
+        static ref OPTIONS : HashMap<String, String> = IRC_CONFIG.options.as_ref().expect("No options property within configuration?").clone();
+    }
 
     let mut irc_state_ = IRCState::new(GithubType::MockGithubConnection, &handle);
     let irc_state = &mut irc_state_;
 
     let irc_server_addr = (*format!(
         "{}:{}",
-        irc_config.server.as_ref().unwrap(),
-        irc_config.port.as_ref().unwrap()
+        IRC_CONFIG.server.as_ref().unwrap(),
+        IRC_CONFIG.port.as_ref().unwrap()
     )).parse()
         .unwrap();
     let irc_server_tcp = TcpListener::bind(&irc_server_addr, &handle).unwrap();
@@ -377,7 +378,7 @@ fn test_one_chat(path: &Path) -> bool {
             })
     }.map_err(to_irc_error);
 
-    let irc_client_future = IrcClient::new_future(handle.clone(), &irc_config).expect(
+    let irc_client_future = IrcClient::new_future(handle.clone(), &IRC_CONFIG).expect(
         "Couldn't initialize server \
          with given configuration file",
     );
@@ -402,7 +403,7 @@ fn test_one_chat(path: &Path) -> bool {
                 }
             }).for_each(move |message| {
                 debug!("got IRC message");
-                process_irc_message(&irc_client, irc_state, options, message);
+                process_irc_message(&irc_client, irc_state, &OPTIONS, message);
                 Ok(())
             })
                 .join(irc_outgoing_future)

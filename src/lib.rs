@@ -46,10 +46,10 @@ pub enum GithubType {
 
 /// Run an iteration of the main loop of the bot, given an IRC server
 /// (with a real or mock / connection).
-pub fn process_irc_message<'opts>(
+pub fn process_irc_message(
     irc: &IrcClient,
-    irc_state: &mut IRCState<'opts>,
-    options: &'opts HashMap<String, String>,
+    irc_state: &mut IRCState,
+    options: &'static HashMap<String, String>,
     message: Message,
 ) {
     match message.command {
@@ -231,10 +231,10 @@ pub fn code_description() -> &'static String {
     &CODE_DESCRIPTION
 }
 
-fn handle_bot_command<'opts>(
+fn handle_bot_command(
     irc: &IrcClient,
-    options: &'opts HashMap<String, String>,
-    irc_state: &mut IRCState<'opts>,
+    options: &'static HashMap<String, String>,
+    irc_state: &mut IRCState,
     command: &str,
     response_target: &str,
     response_is_action: bool,
@@ -418,15 +418,15 @@ fn handle_bot_command<'opts>(
 
 /// The data from IRC channels that we're storing in order to make comments in
 /// github.
-pub struct IRCState<'opts> {
-    channel_data: HashMap<String, ChannelData<'opts>>,
+pub struct IRCState {
+    channel_data: HashMap<String, ChannelData>,
     github_type: GithubType,
     event_loop: Handle,
 }
 
-impl<'opts> IRCState<'opts> {
+impl IRCState {
     /// Create an empty IRCState.
-    pub fn new(github_type_: GithubType, event_loop_: &Handle) -> IRCState<'opts> {
+    pub fn new(github_type_: GithubType, event_loop_: &Handle) -> IRCState {
         IRCState {
             channel_data: HashMap::new(),
             github_type: github_type_,
@@ -437,8 +437,8 @@ impl<'opts> IRCState<'opts> {
     fn channel_data(
         &mut self,
         channel: &str,
-        options: &'opts HashMap<String, String>,
-    ) -> &mut ChannelData<'opts> {
+        options: &'static HashMap<String, String>,
+    ) -> &mut ChannelData {
         let github_type = self.github_type;
         self.channel_data
             .entry(String::from(channel))
@@ -459,10 +459,10 @@ struct TopicData {
     resolutions: Vec<String>,
 }
 
-struct ChannelData<'opts> {
+struct ChannelData {
     channel_name: String,
     current_topic: Option<TopicData>,
-    options: &'opts HashMap<String, String>,
+    options: &'static HashMap<String, String>,
     github_type: GithubType,
 }
 
@@ -619,12 +619,12 @@ where
         .next()
 }
 
-impl<'opts> ChannelData<'opts> {
+impl ChannelData {
     fn new(
         channel_name_: &str,
-        options_: &'opts HashMap<String, String>,
+        options_: &'static HashMap<String, String>,
         github_type_: GithubType,
-    ) -> ChannelData<'opts> {
+    ) -> ChannelData {
         ChannelData {
             channel_name: String::from(channel_name_),
             current_topic: None,
