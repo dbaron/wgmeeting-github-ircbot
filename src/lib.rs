@@ -144,13 +144,13 @@ pub fn process_irc_message(
                             event_loop: Handle,
                         ) -> () {
                             let mut this_channel_data = this_channel_data_cell.borrow_mut();
-                            let irc = irc.clone();
                             let deadline =
                                 this_channel_data.last_activity + activity_timeout_duration;
                             let timeout = Timeout::new_at(deadline, &event_loop)
                                 .unwrap()
                                 .map({
                                     let event_loop = event_loop.clone();
+                                    let irc = irc.clone();
                                     let this_channel_data_cell = this_channel_data_cell.clone();
                                     move |_timeout| {
                                         {
@@ -172,9 +172,9 @@ pub fn process_irc_message(
                                         // scope above, really an else on the chain inside).
                                         create_timeout(
                                             &irc,
-                                            this_channel_data_cell.clone(),
+                                            this_channel_data_cell,
                                             activity_timeout_duration,
-                                            event_loop.clone(),
+                                            event_loop,
                                         );
                                     }
                                 })
