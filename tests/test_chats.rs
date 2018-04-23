@@ -59,7 +59,6 @@ fn test_chats() {
     );
 }
 
-#[allow(dead_code)]
 fn panic_on_err<T>(err: T) -> ()
 where
     T: Debug,
@@ -266,6 +265,10 @@ fn test_one_chat(path: &Path) -> bool {
                 (
                     format!("github_repos_allowed"),
                     format!("dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo"),
+                ),
+                (
+                    format!("activity_timeout_minutes"),
+                    format!("0"),
                 ),
             ])),
             ..Default::default()

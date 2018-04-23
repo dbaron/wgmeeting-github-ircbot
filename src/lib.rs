@@ -27,12 +27,17 @@ use irc::client::Client;
 use irc::client::ext::ClientExt;
 use irc::client::prelude::{Command, IrcClient};
 use irc::proto::message::Message;
-use tokio_core::reactor::Handle;
+use tokio_core::reactor::{Handle, Timeout};
 use regex::Regex;
+use std::cell::RefCell;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
+use std::fmt::Debug;
 use std::iter;
+use std::rc::Rc;
+use std::str::FromStr;
+use std::time::{Duration, Instant};
 
 #[derive(Copy, Clone)]
 /// Whether to use a real github connection for real use of the bot, or a fake
@@ -42,6 +47,13 @@ pub enum GithubType {
     RealGithubConnection,
     /// Don't make real connections to github (for tests).
     MockGithubConnection,
+}
+
+fn panic_on_err<T>(err: T) -> ()
+where
+    T: Debug,
+{
+    panic!("{:?}", err);
 }
 
 /// Run an iteration of the main loop of the bot, given an IRC server
@@ -106,7 +118,8 @@ pub fn process_irc_message(
                                 if !is_present_plus(&*line.message) {
                                     // FIXME: refactor away clone
                                     let event_loop = irc_state.event_loop.clone();
-                                    let this_channel_data = irc_state.channel_data(target, options);
+                                    let mut this_channel_data =
+                                        irc_state.channel_data(target, options).borrow_mut();
                                     if let Some(response) =
                                         this_channel_data.add_line(&irc, event_loop, line)
                                     {
@@ -114,6 +127,73 @@ pub fn process_irc_message(
                                     }
                                 }
                             }
+                        }
+
+                        // FIXME: refactor away clone
+                        let event_loop = irc_state.event_loop.clone();
+
+                        let this_channel_data_cell = irc_state.channel_data(target, options);
+                        this_channel_data_cell.borrow_mut().last_activity = Instant::now();
+                        let activity_timeout_duration = Duration::from_secs(
+                            60u64 * u64::from_str(&*options["activity_timeout_minutes"]).unwrap(),
+                        );
+                        fn create_timeout(
+                            irc: &IrcClient,
+                            this_channel_data_cell: Rc<RefCell<ChannelData>>,
+                            activity_timeout_duration: Duration,
+                            event_loop: Handle,
+                        ) -> () {
+                            let mut this_channel_data = this_channel_data_cell.borrow_mut();
+                            let irc = irc.clone();
+                            let deadline =
+                                this_channel_data.last_activity + activity_timeout_duration;
+                            let timeout = Timeout::new_at(deadline, &event_loop)
+                                .unwrap()
+                                .map({
+                                    let event_loop = event_loop.clone();
+                                    let this_channel_data_cell = this_channel_data_cell.clone();
+                                    move |_timeout| {
+                                        {
+                                            let mut this_channel_data =
+                                                this_channel_data_cell.borrow_mut();
+                                            this_channel_data.have_activity_timeout = false;
+                                            if this_channel_data.current_topic.is_none() {
+                                                // No topic to time out.
+                                                return;
+                                            } else if Instant::now()
+                                                >= this_channel_data.last_activity
+                                                    + activity_timeout_duration
+                                            {
+                                                this_channel_data.end_topic(&irc, event_loop);
+                                                return;
+                                            }
+                                        }
+                                        // We need to create a new timeout (outside the borrow_mut
+                                        // scope above, really an else on the chain inside).
+                                        create_timeout(
+                                            &irc,
+                                            this_channel_data_cell.clone(),
+                                            activity_timeout_duration,
+                                            event_loop.clone(),
+                                        );
+                                    }
+                                })
+                                .map_err(panic_on_err);
+                            this_channel_data.have_activity_timeout = true;
+                            event_loop.spawn(timeout);
+                        }
+
+                        if {
+                            let mut this_channel_data = this_channel_data_cell.borrow();
+                            this_channel_data.current_topic.is_some()
+                                && !this_channel_data.have_activity_timeout
+                        } {
+                            create_timeout(
+                                irc,
+                                this_channel_data_cell.clone(),
+                                activity_timeout_duration,
+                                event_loop,
+                            );
                         }
                     } else {
                         warn!(
@@ -323,7 +403,7 @@ fn handle_bot_command(
             let mut sorted_channels: Vec<&String> = irc_state.channel_data.keys().collect();
             sorted_channels.sort();
             for channel in sorted_channels {
-                let ref channel_data = irc_state.channel_data[channel];
+                let channel_data = irc_state.channel_data[channel].borrow();
                 if let Some(ref topic) = channel_data.current_topic {
                     send_line(
                         None,
@@ -348,7 +428,9 @@ fn handle_bot_command(
         "bye" => {
             if response_target.starts_with('#') {
                 let event_loop = irc_state.event_loop.clone(); // FIXME: refactor away clone
-                let this_channel_data = irc_state.channel_data(response_target, options);
+                let mut this_channel_data = irc_state
+                    .channel_data(response_target, options)
+                    .borrow_mut();
                 this_channel_data.end_topic(irc, event_loop);
                 irc.send(Command::PART(
                     String::from(response_target),
@@ -364,7 +446,9 @@ fn handle_bot_command(
         "end topic" => {
             if response_target.starts_with('#') {
                 let event_loop = irc_state.event_loop.clone(); // FIXME: refactor away clone
-                let this_channel_data = irc_state.channel_data(response_target, options);
+                let mut this_channel_data = irc_state
+                    .channel_data(response_target, options)
+                    .borrow_mut();
                 this_channel_data.end_topic(irc, event_loop);
             } else {
                 send_line(response_username, "'end topic' only works in a channel");
@@ -375,7 +459,7 @@ fn handle_bot_command(
                 .channel_data
                 .iter()
                 .filter_map(|(channel, channel_data)| {
-                    if channel_data.current_topic.is_some() {
+                    if channel_data.borrow().current_topic.is_some() {
                         Some(channel)
                     } else {
                         None
@@ -419,7 +503,7 @@ fn handle_bot_command(
 /// The data from IRC channels that we're storing in order to make comments in
 /// github.
 pub struct IRCState {
-    channel_data: HashMap<String, ChannelData>,
+    channel_data: HashMap<String, Rc<RefCell<ChannelData>>>,
     github_type: GithubType,
     event_loop: Handle,
 }
@@ -438,11 +522,17 @@ impl IRCState {
         &mut self,
         channel: &str,
         options: &'static HashMap<String, String>,
-    ) -> &mut ChannelData {
+    ) -> &Rc<RefCell<ChannelData>> {
         let github_type = self.github_type;
         self.channel_data
             .entry(String::from(channel))
-            .or_insert_with(|| ChannelData::new(channel, options, github_type))
+            .or_insert_with(|| {
+                Rc::new(RefCell::new(ChannelData::new(
+                    channel,
+                    options,
+                    github_type,
+                )))
+            })
     }
 }
 
@@ -464,6 +554,8 @@ struct ChannelData {
     current_topic: Option<TopicData>,
     options: &'static HashMap<String, String>,
     github_type: GithubType,
+    last_activity: Instant,
+    have_activity_timeout: bool,
 }
 
 impl fmt::Display for ChannelLine {
@@ -630,6 +722,8 @@ impl ChannelData {
             current_topic: None,
             options: options_,
             github_type: github_type_,
+            last_activity: Instant::now(),
+            have_activity_timeout: false,
         }
     }
 
