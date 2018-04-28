@@ -948,10 +948,12 @@ impl GithubCommentTask {
             if let Some(ref caps) = GITHUB_URL_RE.captures(github_url) {
                 let comment_text = format!("{}", self.data);
 
-                let send_response_irc = self.irc.clone();
-                let send_response_target = self.response_target.clone();
-                let send_response = move |response: String| {
-                    send_irc_line(&send_response_irc, &*send_response_target, true, response);
+                let send_response = {
+                    let irc = self.irc.clone();
+                    let target = self.response_target.clone();
+                    move |response: String| {
+                        send_irc_line(&irc, &*target, true, response);
+                    }
                 };
                 match self.github {
                     Some(ref github) => {
@@ -976,17 +978,17 @@ impl GithubCommentTask {
                         };
 
                         let commentopts = &CommentOptions { body: comment_text };
-                        let github_url_for_response = github_url.clone();
-                        let comment_task = comments.create(commentopts).then(move |result| {
-                            ok::<String, ()>(match result {
-                                Ok(_) => {
-                                    format!("Successfully commented on {}", github_url_for_response)
-                                }
-                                Err(err) => format!(
-                                    /* FIXME: Remove newlines *and backtrace* from err. */ "UNABLE TO COMMENT on {} due to error: {:?}",
-                                    github_url_for_response, err
-                                ),
-                            })
+                        let comment_task = comments.create(commentopts).then({
+                            let github_url = github_url.clone();
+                            move |result| {
+                                ok::<String, ()>(match result {
+                                    Ok(_) => format!("Successfully commented on {}", github_url),
+                                    Err(err) => format!(
+                                        /* FIXME: Remove newlines *and backtrace* from err. */ "UNABLE TO COMMENT on {} due to error: {:?}",
+                                        github_url, err
+                                    ),
+                                })
+                            }
                         });
 
                         let mut label_tasks = Vec::new();
