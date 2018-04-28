@@ -1,6 +1,6 @@
 [package]
 name = "wgmeeting_github_ircbot"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["L. David Baron <dbaron@dbaron.org>"]
 build = "build.rs"
 
@@ -12,7 +12,7 @@ lazy_static = "1.0"
 regex = "0.2"
 tokio-core = "0.1" # should upgrade from tokio-core to tokio once hubcaps supports it
 tokio-io = "0.1"
-hubcaps = "0.4"
+hubcaps = "0.4.6"
 hyper = "0.11"
 hyper-tls = "0.1"
 serde_json = "1.0"

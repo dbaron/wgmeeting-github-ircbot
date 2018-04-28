@@ -958,15 +958,26 @@ impl GithubCommentTask {
                         let repo =
                             github.repo(String::from(&caps["owner"]), String::from(&caps["repo"]));
                         let num = caps["number"].parse::<u64>().unwrap();
-                        // FIXME: share this better (without making the
-                        // borrow checker object)!
+                        let (_issue, _pulls, _pull, comments, labels) = match &(caps["type"]) {
+                            "issues" => {
+                                let issue = repo.issue(num);
+                                let comments = issue.comments();
+                                let labels = issue.labels();
+                                (Some(issue), None, None, comments, labels)
+                            }
+                            "pull" => {
+                                let pulls = repo.pulls();
+                                let pull = pulls.get(num);
+                                let comments = pull.comments();
+                                let labels = pull.labels();
+                                (None, Some(pulls), Some(pull), comments, labels)
+                            }
+                            _ => panic!("the regexp should not have allowed this"),
+                        };
+
                         let commentopts = &CommentOptions { body: comment_text };
                         let github_url_for_response = github_url.clone();
-                        let comment_task = match &(caps["type"]) {
-                            "issues" => repo.issue(num).comments().create(commentopts),
-                            "pull" => repo.pulls().get(num).comments().create(commentopts),
-                            _ => panic!("the regexp should not have allowed this"),
-                        }.then(move |result| {
+                        let comment_task = comments.create(commentopts).then(move |result| {
                             ok::<String, ()>(match result {
                                 Ok(_) => {
                                     format!("Successfully commented on {}", github_url_for_response)
@@ -979,12 +990,9 @@ impl GithubCommentTask {
                         });
 
                         let mut label_tasks = Vec::new();
-                        if self.data.resolutions.len() > 0 && &(caps["type"]) == "issues" {
+                        if self.data.resolutions.len() > 0 {
                             // We had resolutions, so remove the "Agenda+" and
                             // "Agenda+ F2F" tags, if present.
-                            // FIXME: Do this for pulls too, once
-                            // hubcaps gives access to labels on a pull
-                            // request.
 
                             // Explicitly discard any errors.  That's because
                             // this might give an error if the label isn't
@@ -993,8 +1001,6 @@ impl GithubCommentTask {
                             // error if we don't have write access to the
                             // repository, so we really ought to distinguish,
                             // and report the latter.
-                            let issue = repo.issue(num);
-                            let labels = issue.labels();
                             for label in ["Agenda+", "Agenda+ F2F"].into_iter() {
                                 let success_str = format!(" and removed the \"{}\" label", label);
                                 label_tasks.push(labels.remove(label).then(|result| {
