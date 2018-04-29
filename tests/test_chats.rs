@@ -286,24 +286,21 @@ fn test_one_chat(path: &Path) -> bool {
     )).parse()
         .unwrap();
     let irc_server_tcp = TcpListener::bind(&irc_server_addr, &handle).unwrap();
-    let irc_server_stream = {
-        let handle = handle.clone();
-        let actual_lines_cell = actual_lines_cell.clone();
-        let is_finished_cell = is_finished_cell.clone();
-        irc_server_tcp
-            .incoming()
-            .take(1)
-            .into_future()
-            .map_err(|(err, _stream)| err)
-            .map(|(conn_option, _stream)| conn_option.unwrap())
-            .and_then(move |(tcp_stream, _socket_addr)| {
+    let irc_server_stream = irc_server_tcp
+        .incoming()
+        .take(1)
+        .into_future()
+        .map_err(|(err, _stream)| err)
+        .map(|(conn_option, _stream)| conn_option.unwrap())
+        .and_then({
+            let handle = handle.clone();
+            let actual_lines_cell = actual_lines_cell.clone();
+            let is_finished_cell = is_finished_cell.clone();
+            move |(tcp_stream, _socket_addr)| {
                 tcp_stream.set_nodelay(true).unwrap();
                 debug!("IRC server got incoming connection: nodelay={} recv_buffer_size={} send_buffer_size={}", tcp_stream.nodelay().unwrap(), tcp_stream.recv_buffer_size().unwrap(), tcp_stream.send_buffer_size().unwrap());
-                let actual_lines_cell_writer = actual_lines_cell.clone();
-                let actual_lines_cell_reader = actual_lines_cell.clone();
                 let (writer, reader) = tcp_stream.framed(LinesCodec::new()).split();
                 let writer_cell = Rc::new(RefCell::new(writer));
-                let writer_cell_2 = writer_cell.clone();
                 let logged_lines_future = take_while_external_condition::new(reader, {
                     let is_finished_cell = is_finished_cell.clone();
                     move || {
@@ -317,55 +314,62 @@ fn test_one_chat(path: &Path) -> bool {
                         );
                         !is_finished_cell.get()
                     }
-                }).for_each(move |line| {
-                    debug!("IRC server read line: {}", line);
-                    {
-                        let mut wait_lines_data = wait_lines_data_cell.borrow_mut();
-                        wait_lines_data.expect_lines = wait_lines_data.expect_lines - 1;
-                    }
-                    {
-                        let mut actual_lines = actual_lines_cell_reader.borrow_mut();
+                }).for_each({
+                    let actual_lines_cell = actual_lines_cell.clone();
+                    move |line| {
+                        debug!("IRC server read line: {}", line);
+                        {
+                            let mut wait_lines_data = wait_lines_data_cell.borrow_mut();
+                            wait_lines_data.expect_lines = wait_lines_data.expect_lines - 1;
+                        }
+                        {
+                            let mut actual_lines = actual_lines_cell.borrow_mut();
 
-                        actual_lines.append(&mut ">".bytes().collect());
-                        actual_lines.extend_from_slice(
-                            line.chars()
-                                .flat_map(|c| c.escape_default())
-                                .collect::<String>()
-                                .as_bytes(),
-                        );
-                        actual_lines.append(&mut "\r\n".bytes().collect());
+                            actual_lines.append(&mut ">".bytes().collect());
+                            actual_lines.extend_from_slice(
+                                line.chars()
+                                    .flat_map(|c| c.escape_default())
+                                    .collect::<String>()
+                                    .as_bytes(),
+                            );
+                            actual_lines.append(&mut "\r\n".bytes().collect());
+                        }
+                        Ok(())
                     }
-                    Ok(())
                 });
                 let send_lines_future = lines_to_write_stream
-                    .and_then(move |line| {
-                        {
-                            let mut actual_lines = actual_lines_cell_writer.borrow_mut();
-                            let mut writer = writer_cell.borrow_mut();
-
-                            // note that line still begins with '<'
-                            // FIXME: Clean up this total hack for \u{1} !
-                            // (The other direction uses escape_default().)
-                            let line_str = str::from_utf8(&line[1..])
-                                .unwrap()
-                                .replace("\\u{1}", "\u{1}");
-                            debug!("IRC server writing line: {}", line_str);
-
-                            actual_lines.extend_from_slice(&line);
-                            actual_lines.append(&mut "\r\n".bytes().collect());
-                            if writer.start_send(String::from(line_str)).unwrap()
-                                != futures::AsyncSink::Ready
+                    .and_then({
+                        let actual_lines_cell = actual_lines_cell.clone();
+                        let writer_cell = writer_cell.clone();
+                        move |line| {
                             {
-                                panic!("Sink full");
-                            }
-                        }
-                        futures::future::poll_fn({
-                            let writer_cell = writer_cell.clone();
-                            move || {
+                                let mut actual_lines = actual_lines_cell.borrow_mut();
                                 let mut writer = writer_cell.borrow_mut();
-                                writer.poll_complete()
+
+                                // note that line still begins with '<'
+                                // FIXME: Clean up this total hack for \u{1} !
+                                // (The other direction uses escape_default().)
+                                let line_str = str::from_utf8(&line[1..])
+                                    .unwrap()
+                                    .replace("\\u{1}", "\u{1}");
+                                debug!("IRC server writing line: {}", line_str);
+
+                                actual_lines.extend_from_slice(&line);
+                                actual_lines.append(&mut "\r\n".bytes().collect());
+                                if writer.start_send(String::from(line_str)).unwrap()
+                                    != futures::AsyncSink::Ready
+                                {
+                                    panic!("Sink full");
+                                }
                             }
-                        })
+                            futures::future::poll_fn({
+                                let writer_cell = writer_cell.clone();
+                                move || {
+                                    let mut writer = writer_cell.borrow_mut();
+                                    writer.poll_complete()
+                                }
+                            })
+                        }
                     })
                     .for_each(|()| Ok(()))
                     .and_then(move |()| Timeout::new(Duration::from_millis(10), &handle))
@@ -374,12 +378,13 @@ fn test_one_chat(path: &Path) -> bool {
                         is_finished_cell.set(true);
                         // tcp_stream.shutdown(std::net::Shutdown::Both)
                         // FIXME: This isn't enough.
-                        let mut writer = writer_cell_2.borrow_mut();
+                        let mut writer = writer_cell.borrow_mut();
                         writer.close()
                     });
                 logged_lines_future.join(send_lines_future)
-            })
-    }.map_err(to_irc_error);
+            }
+        })
+        .map_err(to_irc_error);
 
     let irc_client_future = IrcClient::new_future(handle.clone(), &IRC_CONFIG).expect(
         "Couldn't initialize server \
