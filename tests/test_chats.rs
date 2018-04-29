@@ -131,11 +131,11 @@ fn test_one_chat(path: &Path) -> bool {
     // A stream of the file data, but which will be slowed down so that it is
     // Async::NotReady when we ought to be waiting for input from the IRC server
     // instead.
-    let file_data_stream = {
+    let file_data_stream = futures::stream::poll_fn({
         let wait_lines_data_cell = wait_lines_data_cell.clone();
         let expected_lines_cell = expected_lines_cell.clone();
         let handle = handle.clone();
-        futures::stream::poll_fn(move || -> Poll<Option<Vec<u8>>, std::io::Error> {
+        move || -> Poll<Option<Vec<u8>>, std::io::Error> {
             debug!("in poll_fn");
             if wait_lines_data_cell.borrow().should_wait() {
                 // FIXME: Is this timer really needed?
@@ -224,8 +224,8 @@ fn test_one_chat(path: &Path) -> bool {
                 }
                 Ok(Async::Ready(line_option))
             }
-        })
-    };
+        }
+    });
 
     // Note that this leaves the initial '<' in the line.
     let lines_to_write_stream = file_data_stream.filter(|line| line.first() == Some(&('<' as u8)));
