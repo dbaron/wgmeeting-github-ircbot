@@ -18,7 +18,7 @@ extern crate regex;
 extern crate tokio_core;
 
 use futures::prelude::*;
-use futures::future::ok;
+use futures::future::{ok, Either};
 use hyper::client::HttpConnector;
 use hyper_tls::HttpsConnector;
 use hubcaps::{Credentials, Github};
@@ -120,11 +120,7 @@ pub fn process_irc_message(
                                     let event_loop = irc_state.event_loop.clone();
                                     let mut this_channel_data =
                                         irc_state.channel_data(target, options).borrow_mut();
-                                    if let Some(response) =
-                                        this_channel_data.add_line(&irc, event_loop, line)
-                                    {
-                                        send_irc_line(&irc, target, true, response);
-                                    }
+                                    this_channel_data.add_line(&irc, target, event_loop, line);
                                 }
                             }
                         }
@@ -732,50 +728,88 @@ impl ChannelData {
     fn add_line(
         &mut self,
         irc: &IrcClient,
+        target: &String,
         event_loop: Handle,
         line: ChannelLine,
-    ) -> Option<String> {
+    ) {
         match line.is_action {
             false => if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
-                self.start_topic(irc, event_loop, topic);
+                self.start_topic(irc, event_loop.clone(), topic);
             },
             true => if line.source == "trackbot" && line.message == "is ending a teleconference." {
-                self.end_topic(irc, event_loop);
+                self.end_topic(irc, event_loop.clone());
             },
         };
+        let respond_with = {
+            let irc = irc.clone();
+            let target = target.clone();
+            move |response| {
+                send_irc_line(&irc, &target, true, response);
+            }
+        };
         match self.current_topic {
-            None => match extract_github_url(&line.message, self.options, &None, false) {
-                (Some(_), None) => Some(String::from(
-                    "I can't set a github URL because you haven't started a \
-                     topic.",
-                )),
-                (None, Some(ref extract_response)) => Some(
-                    String::from(
-                        "I can't set a github URL because you haven't started a topic.  \
-                         Also, ",
-                    ) + extract_response,
-                ),
-                (None, None) => None,
-                _ => panic!("unexpected state"),
-            },
+            None => {
+                let response = match extract_github_url(&line.message, self.options, &None, false) {
+                    (Some(_), None) => Some(String::from(
+                        "I can't set a github URL because you haven't started a \
+                         topic.",
+                    )),
+                    (None, Some(ref extract_response)) => Some(
+                        String::from(
+                            "I can't set a github URL because you haven't started a topic.  \
+                             Also, ",
+                        ) + extract_response,
+                    ),
+                    (None, None) => None,
+                    _ => panic!("unexpected state"),
+                };
+                let _ = response.map(respond_with);
+            }
             Some(ref mut data) => {
                 let (new_url_option, extract_failure_response) =
                     extract_github_url(&line.message, self.options, &data.github_url, true);
-                let response = match (new_url_option.as_ref(), &data.github_url) {
-                    (None, _) => extract_failure_response,
-                    (Some(&None), &None) => None,
+                match (new_url_option.as_ref(), &data.github_url) {
+                    (None, _) => {
+                        let _ = extract_failure_response.map(respond_with);
+                    }
+                    (Some(&None), &None) => (),
                     (Some(&None), _) => {
-                        Some(String::from("OK, I won't post this discussion to GitHub."))
+                        respond_with(String::from("OK, I won't post this discussion to GitHub."));
                     }
-                    (Some(&Some(ref new_url)), &None) => {
-                        Some(format!("OK, I'll post this discussion to {}.", new_url))
+                    (Some(new_url), old_url) if *old_url == *new_url => (),
+                    (Some(&Some(ref new_url)), ref old_url_option) => {
+                        let new_url =
+                            GithubURL::from_string(new_url.clone()).expect("regexp failure");
+                        let github = github_connection(&event_loop, self.options, self.github_type);
+                        let respond_title_future = match github {
+                            // When mocking the github connection for tests, pretend it's "TITLE".
+                            None => Either::A(Ok(String::from("TITLE")).into_future()),
+                            Some(github) => Either::B({
+                                let repo = github.repo(new_url.owner, new_url.repo);
+                                let num = new_url.number;
+                                match new_url.which {
+                                    IssuesOrPull::Issues => Either::A(
+                                        repo.issue(num).get().map(move |issue| issue.title),
+                                    ),
+                                    IssuesOrPull::Pull => Either::B(
+                                        repo.pulls().get(num).get().map(move |pull| pull.title),
+                                    ),
+                                }.or_else(move |_err| {
+                                    Ok(String::from("COULDN'T GET TITLE")).into_future()
+                                })
+                            }),
+                        }.map({
+                            let old_url_option = (*old_url_option).clone();
+                            let new_url = new_url.url.clone();
+                            move |title| {
+                                match old_url_option {
+                                    None => respond_with(format!("OK, I'll post this discussion to {} ({}).", new_url, title)),
+                                    Some(old_url) => respond_with(format!("OK, I'll post this discussion to {} ({}) instead of {} like you said before.", new_url, title, old_url)),
+                                }
+                            }
+                        });
+                        event_loop.spawn(respond_title_future);
                     }
-                    (Some(new_url), old_url) if *old_url == *new_url => None,
-                    (Some(&Some(ref new_url)), &Some(ref old_url)) => Some(format!(
-                        "OK, I'll post this discussion to {} instead of {} like \
-                         you said before.",
-                        new_url, old_url
-                    )),
                 };
 
                 if let Some(new_url) = new_url_option {
@@ -791,9 +825,7 @@ impl ChannelData {
                     }
 
                     data.lines.push(line);
-                }
-
-                response
+                };
             }
         }
     }
@@ -943,6 +975,23 @@ impl GithubURL {
     }
 }
 
+// Return Some(connection) when we're really connecting and None if we're
+// mocking the connection.
+fn github_connection(
+    event_loop: &Handle,
+    options: &HashMap<String, String>,
+    github_type: GithubType,
+) -> Option<Github<HttpsConnector<HttpConnector>>> {
+    match github_type {
+        GithubType::RealGithubConnection => Some(Github::new(
+            &*options["github_uastring"],
+            Some(Credentials::Token(options["github_access_token"].clone())),
+            event_loop,
+        )),
+        GithubType::MockGithubConnection => None,
+    }
+}
+
 struct GithubCommentTask {
     // a clone of the IRCServer is OK, because it reference-counts almost all of its internals
     irc: IrcClient,
@@ -962,14 +1011,7 @@ impl GithubCommentTask {
         options: &HashMap<String, String>,
         github_type_: GithubType,
     ) -> GithubCommentTask {
-        let github_ = match github_type_ {
-            GithubType::RealGithubConnection => Some(Github::new(
-                &*options["github_uastring"],
-                Some(Credentials::Token(options["github_access_token"].clone())),
-                &event_loop_,
-            )),
-            GithubType::MockGithubConnection => None,
-        };
+        let github_ = github_connection(&event_loop_, options, github_type_);
         GithubCommentTask {
             irc: irc_.clone(),
             response_target: String::from(response_target_),
