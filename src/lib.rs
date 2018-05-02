@@ -897,6 +897,52 @@ fn extract_github_url(
     }
 }
 
+enum IssuesOrPull {
+    Issues,
+    Pull,
+}
+
+struct GithubURL {
+    url: String, // The whole URL, of which the below are parts.
+    owner: String,
+    repo: String,
+    which: IssuesOrPull,
+    number: u64,
+}
+
+impl GithubURL {
+    fn from_string<S>(s: S) -> Option<GithubURL>
+    where
+        S: Into<String>,
+    {
+        lazy_static! {
+            static ref GITHUB_URL_RE: Regex =
+                Regex::new(r"^https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(?P<type>(issues|pull))/(?P<number>[0-9]+)$")
+                .unwrap();
+        }
+
+        let s = s.into();
+        let mut result = match GITHUB_URL_RE.captures(&s) {
+            None => None,
+            Some(ref caps) => Some(GithubURL {
+                url: String::from(""),
+                owner: String::from(&caps["owner"]),
+                repo: String::from(&caps["repo"]),
+                which: match &(caps["type"]) {
+                    "issues" => IssuesOrPull::Issues,
+                    "pull" => IssuesOrPull::Pull,
+                    _ => panic!("the regexp should not have allowed this"),
+                },
+                number: caps["number"].parse::<u64>().unwrap(),
+            }),
+        };
+        if let Some(ref mut result) = result {
+            result.url = s;
+        }
+        result
+    }
+}
+
 struct GithubCommentTask {
     // a clone of the IRCServer is OK, because it reference-counts almost all of its internals
     irc: IrcClient,
@@ -938,14 +984,8 @@ impl GithubCommentTask {
         // For real github connections, run on another thread, but for fake
         // ones, run synchronously to make testing easier.
 
-        lazy_static! {
-            static ref GITHUB_URL_RE: Regex =
-                Regex::new(r"^https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(?P<type>(issues|pull))/(?P<number>[0-9]+)$")
-                .unwrap();
-        }
-
         if let Some(ref github_url) = self.data.github_url {
-            if let Some(ref caps) = GITHUB_URL_RE.captures(github_url) {
+            if let Some(github_url) = GithubURL::from_string(github_url.clone()) {
                 let comment_text = format!("{}", self.data);
 
                 let send_response = {
@@ -957,29 +997,27 @@ impl GithubCommentTask {
                 };
                 match self.github {
                     Some(ref github) => {
-                        let repo =
-                            github.repo(String::from(&caps["owner"]), String::from(&caps["repo"]));
-                        let num = caps["number"].parse::<u64>().unwrap();
-                        let (_issue, _pulls, _pull, comments, labels) = match &(caps["type"]) {
-                            "issues" => {
+                        let repo = github.repo(github_url.owner, github_url.repo);
+                        let num = github_url.number;
+                        let (_issue, _pulls, _pull, comments, labels) = match github_url.which {
+                            IssuesOrPull::Issues => {
                                 let issue = repo.issue(num);
                                 let comments = issue.comments();
                                 let labels = issue.labels();
                                 (Some(issue), None, None, comments, labels)
                             }
-                            "pull" => {
+                            IssuesOrPull::Pull => {
                                 let pulls = repo.pulls();
                                 let pull = pulls.get(num);
                                 let comments = pull.comments();
                                 let labels = pull.labels();
                                 (None, Some(pulls), Some(pull), comments, labels)
                             }
-                            _ => panic!("the regexp should not have allowed this"),
                         };
 
                         let commentopts = &CommentOptions { body: comment_text };
                         let comment_task = comments.create(commentopts).then({
-                            let github_url = github_url.clone();
+                            let github_url = github_url.url.clone();
                             move |result| {
                                 ok::<String, ()>(match result {
                                     Ok(_) => format!("Successfully commented on {}", github_url),
@@ -1033,15 +1071,18 @@ impl GithubCommentTask {
                             send_irc_line(&self.irc, "github-comments", false, String::from(line))
                         };
                         send_github_comment_line(
-                            format!("!BEGIN GITHUB COMMENT IN {}", github_url).as_str(),
+                            format!("!BEGIN GITHUB COMMENT IN {}", github_url.url).as_str(),
                         );
                         for line in comment_text.split('\n') {
                             send_github_comment_line(line);
                         }
                         send_github_comment_line(
-                            format!("!END GITHUB COMMENT IN {}", github_url).as_str(),
+                            format!("!END GITHUB COMMENT IN {}", github_url.url).as_str(),
                         );
-                        send_response(format!("{} on {}", "Successfully commented", github_url));
+                        send_response(format!(
+                            "{} on {}",
+                            "Successfully commented", github_url.url
+                        ));
                     }
                 };
             } else {
