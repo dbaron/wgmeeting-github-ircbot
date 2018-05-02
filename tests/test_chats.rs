@@ -123,9 +123,12 @@ fn test_one_chat(path: &Path) -> bool {
         }
     };
 
+    const WAIT_DURATION: Duration = Duration::from_millis(100u64);
+    const SERVER_SHUTDOWN_DURATION: Duration = Duration::from_millis(10u64);
+
     let wait_lines_data_cell = Rc::new(RefCell::new(WaitLinesData {
         expect_lines: 3, // length of identify sequence
-        wait_deadline: Instant::now() + Duration::from_millis(10),
+        wait_deadline: Instant::now() + WAIT_DURATION,
     }));
 
     // A stream of the file data, but which will be slowed down so that it is
@@ -177,8 +180,7 @@ fn test_one_chat(path: &Path) -> bool {
                             {
                                 let mut wait_lines_data = wait_lines_data_cell.borrow_mut();
                                 wait_lines_data.expect_lines = wait_lines_data.expect_lines + 1;
-                                wait_lines_data.wait_deadline =
-                                    Instant::now() + Duration::from_millis(10);
+                                wait_lines_data.wait_deadline = Instant::now() + WAIT_DURATION;
                             }
                             debug!(
                                 "adding line to expected results: {}",
@@ -196,8 +198,7 @@ fn test_one_chat(path: &Path) -> bool {
                             {
                                 let mut wait_lines_data = wait_lines_data_cell.borrow_mut();
                                 wait_lines_data.expect_lines = wait_lines_data.expect_lines + 1;
-                                wait_lines_data.wait_deadline =
-                                    Instant::now() + Duration::from_millis(10);
+                                wait_lines_data.wait_deadline = Instant::now() + WAIT_DURATION;
                             }
                             // FIXME: Need to get these in the actual data, too!
                             info!(
@@ -372,7 +373,7 @@ fn test_one_chat(path: &Path) -> bool {
                         }
                     })
                     .for_each(|()| Ok(()))
-                    .and_then(move |()| Timeout::new(Duration::from_millis(10), &handle))
+                    .and_then(move |()| Timeout::new(SERVER_SHUTDOWN_DURATION, &handle))
                     .and_then(move |_timeout| {
                         debug!("SHUTTING DOWN THE SERVER");
                         is_finished_cell.set(true);
