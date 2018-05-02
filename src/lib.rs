@@ -789,12 +789,12 @@ impl ChannelData {
                                 let num = new_url.number;
                                 match new_url.which {
                                     IssuesOrPull::Issues => Either::A(
-                                        repo.issue(num).get().map(move |issue| issue.title),
+                                        repo.issue(num).get().map(|issue| issue.title),
                                     ),
                                     IssuesOrPull::Pull => Either::B(
-                                        repo.pulls().get(num).get().map(move |pull| pull.title),
+                                        repo.pulls().get(num).get().map(|pull| pull.title),
                                     ),
-                                }.or_else(move |_err| {
+                                }.or_else(|_err| {
                                     Ok(String::from("COULDN'T GET TITLE")).into_future()
                                 })
                             }),
