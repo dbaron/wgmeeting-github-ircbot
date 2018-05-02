@@ -268,6 +268,9 @@ fn test_one_chat(path: &Path) -> bool {
                     format!("dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo"),
                 ),
                 (
+                    // Use of a 0 value disables timeouts, which is needed to avoid intermittent
+                    // failures (using really-0 timeouts) or having the event loop wait until the
+                    // timeout completes (positive timeouts).
                     format!("activity_timeout_minutes"),
                     format!("0"),
                 ),

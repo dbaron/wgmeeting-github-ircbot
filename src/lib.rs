@@ -130,18 +130,14 @@ pub fn process_irc_message(
 
                         let this_channel_data_cell = irc_state.channel_data(target, options);
                         this_channel_data_cell.borrow_mut().last_activity = Instant::now();
-                        let activity_timeout_duration = Duration::from_secs(
-                            60u64 * u64::from_str(&*options["activity_timeout_minutes"]).unwrap(),
-                        );
                         fn create_timeout(
                             irc: &IrcClient,
                             this_channel_data_cell: Rc<RefCell<ChannelData>>,
-                            activity_timeout_duration: Duration,
                             event_loop: Handle,
                         ) -> () {
                             let mut this_channel_data = this_channel_data_cell.borrow_mut();
-                            let deadline =
-                                this_channel_data.last_activity + activity_timeout_duration;
+                            let deadline = this_channel_data.last_activity
+                                + this_channel_data.activity_timeout_duration;
                             let timeout = Timeout::new_at(deadline, &event_loop)
                                 .unwrap()
                                 .map({
@@ -158,7 +154,7 @@ pub fn process_irc_message(
                                                 return;
                                             } else if Instant::now()
                                                 >= this_channel_data.last_activity
-                                                    + activity_timeout_duration
+                                                    + this_channel_data.activity_timeout_duration
                                             {
                                                 this_channel_data.end_topic(&irc, event_loop);
                                                 return;
@@ -166,12 +162,7 @@ pub fn process_irc_message(
                                         }
                                         // We need to create a new timeout (outside the borrow_mut
                                         // scope above, really an else on the chain inside).
-                                        create_timeout(
-                                            &irc,
-                                            this_channel_data_cell,
-                                            activity_timeout_duration,
-                                            event_loop,
-                                        );
+                                        create_timeout(&irc, this_channel_data_cell, event_loop);
                                     }
                                 })
                                 .map_err(panic_on_err);
@@ -184,12 +175,7 @@ pub fn process_irc_message(
                             this_channel_data.current_topic.is_some()
                                 && !this_channel_data.have_activity_timeout
                         } {
-                            create_timeout(
-                                irc,
-                                this_channel_data_cell.clone(),
-                                activity_timeout_duration,
-                                event_loop,
-                            );
+                            create_timeout(irc, this_channel_data_cell.clone(), event_loop);
                         }
                     } else {
                         warn!(
@@ -552,6 +538,7 @@ struct ChannelData {
     github_type: GithubType,
     last_activity: Instant,
     have_activity_timeout: bool,
+    activity_timeout_duration: Duration,
 }
 
 impl fmt::Display for ChannelLine {
@@ -713,13 +700,21 @@ impl ChannelData {
         options_: &'static HashMap<String, String>,
         github_type_: GithubType,
     ) -> ChannelData {
+        let activity_timeout_duration_ = Duration::from_secs(
+            60u64 * u64::from_str(&*options_["activity_timeout_minutes"]).unwrap(),
+        );
+        let use_activity_timeouts = activity_timeout_duration_ > Duration::from_secs(0);
+
         ChannelData {
             channel_name: String::from(channel_name_),
             current_topic: None,
             options: options_,
             github_type: github_type_,
             last_activity: Instant::now(),
-            have_activity_timeout: false,
+            // If we're not using activity timeouts, disable them by pretending to already have
+            // one.
+            have_activity_timeout: !use_activity_timeouts,
+            activity_timeout_duration: activity_timeout_duration_,
         }
     }
 
@@ -788,9 +783,9 @@ impl ChannelData {
                                 let repo = github.repo(new_url.owner, new_url.repo);
                                 let num = new_url.number;
                                 match new_url.which {
-                                    IssuesOrPull::Issues => Either::A(
-                                        repo.issue(num).get().map(|issue| issue.title),
-                                    ),
+                                    IssuesOrPull::Issues => {
+                                        Either::A(repo.issue(num).get().map(|issue| issue.title))
+                                    }
                                     IssuesOrPull::Pull => Either::B(
                                         repo.pulls().get(num).get().map(|pull| pull.title),
                                     ),
