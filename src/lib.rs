@@ -638,7 +638,7 @@ impl fmt::Display for TopicData {
             try!(write!(
                 f,
                 "The Working Group just discussed {}, and agreed to the \
-                 following resolutions:\n\n",
+                 following:\n\n",
                 escape_as_code_span(&*self.topic)
             ));
             for resolution in &self.resolutions {
