@@ -16,6 +16,9 @@ use irc::client::prelude::{Client, ClientExt, Config, Future, IrcClient, Stream}
 use irc::client::PackedIrcClient;
 use std::collections::HashMap;
 use std::env;
+use std::ffi::OsString;
+use std::fs::File;
+use std::io::Read;
 use tokio_core::reactor::Core;
 use wgmeeting_github_ircbot::*;
 
@@ -23,21 +26,37 @@ fn main() {
     env_logger::init();
 
     lazy_static! {
-        static ref CONFIG: Config = {
-            let config_file = {
-                let mut args = env::args_os().skip(1); // skip program name
-                let config_file = args.next().expect(
-                    "Expected a single command-line argument, the JSON \
-                     configuration file.",
-                );
-                if args.next().is_some() {
-                    panic!("Expected only a single command-line argument, the JSON configuration file.");
-                }
-                config_file
-            };
-            Config::load(config_file).expect("couldn't load configuration file")
+        static ref ARGS: Vec<OsString> = {
+            let args = env::args_os().skip(1).collect::<Vec<_>>();
+            if args.len() != 2 {
+                eprintln!("syntax: {} <config file> <github access token file>\n",
+                    env::args_os().nth(0)
+                        .map(|osstring| osstring.into_string().unwrap_or(String::from("")))
+                        .unwrap_or(String::from("")));
+                ::std::process::exit(1);
+            }
+            args
         };
-        static ref OPTIONS: HashMap<String, String> = CONFIG.options.as_ref().expect("No options property within configuration?").clone();
+        static ref CONFIG: Config = {
+            Config::load(ARGS[0].clone()).expect("couldn't load configuration file")
+        };
+        static ref GITHUB_ACCESS_TOKEN: String = {
+            let mut f = File::open(ARGS[1].clone())
+                .expect("github access token file (second argument) not found");
+            let mut token = String::new();
+            let _numbytes =
+                f.read_to_string(&mut token).expect("couldn't read github access token file");
+            token
+        };
+        static ref OPTIONS: HashMap<String, String> = {
+            let mut options =
+                CONFIG.options.as_ref().expect("No options property within configuration?").clone();
+            // Store the access token with the options, even though we read it from a different
+            // place.
+            let _oldval =
+                options.insert("github_access_token".to_string(), GITHUB_ACCESS_TOKEN.to_string());
+            options
+        };
     }
 
     // FIXME: Add a way to ask the bot to reboot itself?

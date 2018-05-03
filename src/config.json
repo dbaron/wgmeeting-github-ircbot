@@ -13,7 +13,6 @@
   "options": {
     "source": "https://github.com/dbaron/wgmeeting-github-ircbot",
     "github_repos_allowed": "w3c/csswg-drafts w3c/fxtf-drafts w3c/css-houdini-drafts w3c/svgwg w3c/web-platform-tests w3c/imsc w3c/ttml1 w3c/ttml2 w3c/imsc-tests w3c/imsc-vnext-reqs w3c/tt-profile-registry w3c/webvtt w3c/png-hdr-pq w3c/wpub w3c/pwpub w3c/epub4 w3c/dpub-aria-2.0 w3c/publ-wg w3c/aria-practices w3c/svg-aam w3c/graphics-aam w3c/graphics-aria WICG/animation-worklet",
-    "github_access_token": "<ACCESS TOKEN HERE>",
     "github_uastring": "wgmeeting-github-ircbot/0.1.0",
     "activity_timeout_minutes": "90"
   }

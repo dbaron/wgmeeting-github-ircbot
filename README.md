@@ -71,12 +71,12 @@ If you want to use the bot to generate real GitHub comments, you'll need
 to [generate a GitHub personal access
 token](https://github.com/settings/tokens) while logged in to the GitHub
 account that you want to make the comments, and put the personal access
-token in the `github_access_token` field in 
-in `./src/config.json`.  Then you can compile and run the bot with a
-single [`cargo`](http://doc.crates.io/) command, such as one of:
+token in a file (say, `./github_access_token_file`).  Then you can
+compile and run the bot with a single [`cargo`](http://doc.crates.io/)
+command, such as one of:
 
-    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run ./src/config-dev.json
-    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run --release ./src/config.json
+    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run ./src/config-dev.json ./github_access_token_file
+    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run --release ./src/config.json ./github_access_token_file
 
 Or you could just run automated tests with a different single `cargo`
 command (which doesn't require an access token):
