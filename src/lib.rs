@@ -529,6 +529,7 @@ struct TopicData {
     github_url: Option<String>,
     lines: Vec<ChannelLine>,
     resolutions: Vec<String>,
+    remove_from_agenda: bool,
 }
 
 struct ChannelData {
@@ -559,6 +560,7 @@ impl TopicData {
             github_url: None,
             lines: vec![],
             resolutions: vec![],
+            remove_from_agenda: false,
         }
     }
 }
@@ -812,11 +814,16 @@ impl ChannelData {
                 }
 
                 if !line.is_action {
-                    if line.message.starts_with("RESOLUTION")
-                        || line.message.starts_with("RESOLVED")
-                        || line.message.starts_with("SUMMARY")
-                    {
+                    let is_resolution = line.message.starts_with("RESOLUTION")
+                        || line.message.starts_with("RESOLVED");
+                    let is_summary = line.message.starts_with("SUMMARY");
+
+                    if is_resolution || is_summary {
                         data.resolutions.push(line.message.clone());
+                    }
+
+                    if is_resolution {
+                        data.remove_from_agenda = true;
                     }
 
                     data.lines.push(line);
@@ -1067,7 +1074,7 @@ impl GithubCommentTask {
                         });
 
                         let mut label_tasks = Vec::new();
-                        if self.data.resolutions.len() > 0 {
+                        if self.data.remove_from_agenda {
                             // We had resolutions, so remove the "Agenda+" and
                             // "Agenda+ F2F" tags, if present.
 
