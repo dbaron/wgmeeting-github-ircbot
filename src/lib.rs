@@ -780,6 +780,8 @@ impl ChannelData {
                         let github = github_connection(&event_loop, self.options, self.github_type);
                         let respond_title_future = match github {
                             // When mocking the github connection for tests, pretend it's "TITLE".
+                            // FIXME: When upgrading to futures 0.2, use left() and right() rather
+                            // than explicit Either::{A,B}().
                             None => Either::A(Ok(String::from("TITLE")).into_future()),
                             Some(github) => Either::B({
                                 let repo = github.repo(new_url.owner, new_url.repo);
