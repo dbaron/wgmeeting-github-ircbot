@@ -1045,19 +1045,16 @@ impl GithubCommentTask {
                     Some(ref github) => {
                         let repo = github.repo(github_url.owner, github_url.repo);
                         let num = github_url.number;
-                        let (_issue, _pulls, _pull, comments, labels) = match github_url.which {
+                        let (issue, pulls, pull);
+                        let (comments, labels) = match github_url.which {
                             IssuesOrPull::Issues => {
-                                let issue = repo.issue(num);
-                                let comments = issue.comments();
-                                let labels = issue.labels();
-                                (Some(issue), None, None, comments, labels)
+                                issue = repo.issue(num);
+                                (issue.comments(), issue.labels())
                             }
                             IssuesOrPull::Pull => {
-                                let pulls = repo.pulls();
-                                let pull = pulls.get(num);
-                                let comments = pull.comments();
-                                let labels = pull.labels();
-                                (None, Some(pulls), Some(pull), comments, labels)
+                                pulls = repo.pulls();
+                                pull = pulls.get(num);
+                                (pull.comments(), pull.labels())
                             }
                         };
 
