@@ -13,6 +13,7 @@ extern crate irc;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
+extern crate tokio_codec;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate wgmeeting_github_ircbot;
@@ -32,11 +33,11 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 use std::str;
 use std::rc::Rc;
+use tokio_codec::LinesCodec;
 use tokio_core::reactor::Core;
 use tokio_core::reactor::Timeout;
 use tokio_core::net::TcpListener;
 use tokio_io::AsyncRead;
-use tokio_io::codec::LinesCodec;
 use wgmeeting_github_ircbot::*;
 
 #[test]
