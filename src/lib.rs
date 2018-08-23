@@ -22,17 +22,16 @@ extern crate log;
 extern crate regex;
 extern crate tokio_core;
 
-use futures::prelude::*;
 use futures::future::{ok, Either};
+use futures::prelude::*;
+use hubcaps::comments::CommentOptions;
+use hubcaps::{Credentials, Github};
 use hyper::client::HttpConnector;
 use hyper_tls::HttpsConnector;
-use hubcaps::{Credentials, Github};
-use hubcaps::comments::CommentOptions;
-use irc::client::Client;
 use irc::client::ext::ClientExt;
 use irc::client::prelude::{Command, IrcClient};
+use irc::client::Client;
 use irc::proto::message::Message;
-use tokio_core::reactor::{Handle, Timeout};
 use regex::Regex;
 use std::cell::RefCell;
 use std::cmp;
@@ -42,6 +41,7 @@ use std::fmt::Debug;
 use std::iter;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
+use tokio_core::reactor::{Handle, Timeout};
 
 /// Configuration of the bot.
 #[derive(Default, Deserialize)]
@@ -304,11 +304,12 @@ fn send_irc_line(irc: &IrcClient, target: &str, is_action: bool, line: String) {
 /// order to expect the right string.
 pub fn code_description() -> &'static String {
     lazy_static! {
-        static ref CODE_DESCRIPTION: String =
-            format!("{} version {}, compiled from {}",
-                    env!("CARGO_PKG_NAME"),
-                    env!("CARGO_PKG_VERSION"),
-                    include_str!(concat!(env!("OUT_DIR"), "/git-hash")).trim_right());
+        static ref CODE_DESCRIPTION: String = format!(
+            "{} version {}, compiled from {}",
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
+            include_str!(concat!(env!("OUT_DIR"), "/git-hash")).trim_right()
+        );
     }
     &CODE_DESCRIPTION
 }
@@ -387,8 +388,7 @@ fn handle_bot_command(
                 None,
                 &*format!(
                     "My source code is at {} and I'm run by {}.",
-                    config.source,
-                    owners,
+                    config.source, owners,
                 ),
             );
         }
@@ -430,9 +430,8 @@ fn handle_bot_command(
         "bye" => {
             if response_target.starts_with('#') {
                 let event_loop = irc_state.event_loop.clone(); // FIXME: refactor away clone
-                let mut this_channel_data = irc_state
-                    .channel_data(response_target, config)
-                    .borrow_mut();
+                let mut this_channel_data =
+                    irc_state.channel_data(response_target, config).borrow_mut();
                 this_channel_data.end_topic(irc, event_loop);
                 irc.send(Command::PART(
                     String::from(response_target),
@@ -448,9 +447,8 @@ fn handle_bot_command(
         "end topic" => {
             if response_target.starts_with('#') {
                 let event_loop = irc_state.event_loop.clone(); // FIXME: refactor away clone
-                let mut this_channel_data = irc_state
-                    .channel_data(response_target, config)
-                    .borrow_mut();
+                let mut this_channel_data =
+                    irc_state.channel_data(response_target, config).borrow_mut();
                 this_channel_data.end_topic(irc, event_loop);
             } else {
                 send_line(response_username, "'end topic' only works in a channel");
@@ -529,11 +527,7 @@ impl IRCState {
         self.channel_data
             .entry(String::from(channel))
             .or_insert_with(|| {
-                Rc::new(RefCell::new(ChannelData::new(
-                    channel,
-                    config,
-                    github_type,
-                )))
+                Rc::new(RefCell::new(ChannelData::new(channel, config, github_type)))
             })
     }
 }
@@ -632,8 +626,7 @@ fn escape_for_html_block(s: &str) -> String {
     // numeric character references in decimal.
     lazy_static! {
         static ref ISSUE_RE: Regex =
-            Regex::new(r"(?P<space>[[:space:]])[#](?P<number>[0-9])")
-            .unwrap();
+            Regex::new(r"(?P<space>[[:space:]])[#](?P<number>[0-9])").unwrap();
     }
     let no_issue_links = ISSUE_RE.replace_all(s, "${space}#\u{feff}${number}");
 
@@ -722,8 +715,7 @@ impl ChannelData {
         config: &'static BotConfig,
         github_type_: GithubType,
     ) -> ChannelData {
-        let activity_timeout_duration_ =
-            Duration::from_secs(60 * config.activity_timeout_minutes);
+        let activity_timeout_duration_ = Duration::from_secs(60 * config.activity_timeout_minutes);
         let use_activity_timeouts = activity_timeout_duration_ > Duration::from_secs(0);
 
         ChannelData {
@@ -913,10 +905,7 @@ fn extract_github_url(
                 };
                 let (owner, repo) = r.split_at(pos);
                 let repo = &repo[1..];
-                owner == &caps["owner"] && (
-                    repo == &caps["repo"] ||
-                    repo == "*"
-                )
+                owner == &caps["owner"] && (repo == &caps["repo"] || repo == "*")
             });
             if is_allowed {
                 (Some(Some(String::from(&caps["issueurl"]))), None)

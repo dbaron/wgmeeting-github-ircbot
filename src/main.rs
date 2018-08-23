@@ -44,12 +44,11 @@ fn read_config() -> Config {
         args.next().unwrap(),
     );
 
-    let file = File::open(config_file)
-        .expect("couldn't open configuration file");
-    let mut config: Config = serde_json::from_reader(file)
-        .expect("couldn't load configuration file");
-    config.bot.github_access_token = fs::read_to_string(token_file)
-        .expect("couldn't read github access token file");
+    let file = File::open(config_file).expect("couldn't open configuration file");
+    let mut config: Config =
+        serde_json::from_reader(file).expect("couldn't load configuration file");
+    config.bot.github_access_token =
+        fs::read_to_string(token_file).expect("couldn't read github access token file");
     config
 }
 

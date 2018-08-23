@@ -28,13 +28,13 @@ use std::fmt::Debug;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use std::time::{Duration, Instant};
-use std::str;
 use std::rc::Rc;
+use std::str;
+use std::time::{Duration, Instant};
 use tokio_codec::LinesCodec;
+use tokio_core::net::TcpListener;
 use tokio_core::reactor::Core;
 use tokio_core::reactor::Timeout;
-use tokio_core::net::TcpListener;
 use tokio_io::AsyncRead;
 use wgmeeting_github_ircbot::*;
 

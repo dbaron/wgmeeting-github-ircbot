@@ -4,8 +4,8 @@
 
 extern crate futures;
 
-use futures::{Async, Poll};
 use futures::stream::Stream;
+use futures::{Async, Poll};
 
 /// A stream combinator which takes elements from a stream while a predicate
 /// holds.
