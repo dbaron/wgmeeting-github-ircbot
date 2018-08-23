@@ -892,7 +892,7 @@ fn extract_github_url(
 ) -> (Option<Option<String>>, Option<String>) {
     lazy_static! {
         static ref GITHUB_URL_WHOLE_RE: Regex =
-            Regex::new(r"^(?P<issueurl>https://github.com/(?P<repo>[^/]*/[^/]*)/(issues|pull)/(?P<number>[0-9]+))([#][^ ]*)?$")
+            Regex::new(r"^(?P<issueurl>https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(issues|pull)/(?P<number>[0-9]+))([#][^ ]*)?$")
             .unwrap();
         static ref GITHUB_URL_PART_RE: Regex =
             Regex::new(r"https://github.com/(?P<repo>[^/]*/[^/]*)/(issues|pull)/(?P<number>[0-9]+)")
@@ -906,7 +906,19 @@ fn extract_github_url(
         if maybe_url.to_lowercase() == "none" {
             (Some(None), None)
         } else if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
-            if allowed_repos.iter().any(|r| r == &caps["repo"]) {
+            let is_allowed = allowed_repos.iter().any(|r| {
+                let pos = match r.find('/') {
+                    Some(pos) => pos,
+                    None => return false,
+                };
+                let (owner, repo) = r.split_at(pos);
+                let repo = &repo[1..];
+                owner == &caps["owner"] && (
+                    repo == &caps["repo"] ||
+                    repo == "*"
+                )
+            });
+            if is_allowed {
                 (Some(Some(String::from(&caps["issueurl"]))), None)
             } else {
                 (
