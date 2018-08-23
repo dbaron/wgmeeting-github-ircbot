@@ -24,11 +24,9 @@ use futures::prelude::*;
 use irc::client::prelude::{Client, ClientExt, Config, Future, IrcClient, Stream};
 use irc::client::PackedIrcClient;
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::Read;
-use std::iter::FromIterator;
 use std::path::Path;
 use std::time::{Duration, Instant};
 use std::str;
@@ -255,30 +253,20 @@ fn test_one_chat(path: &Path) -> bool {
             // without delay.
             burst_window_length: Some(0),
             max_messages_in_burst: Some(50),
-
-            // FIXME: why doesn't this work as documented?
-            // source: Some(format!("https://github.
-            // com/dbaron/wgmeeting-github-ircbot")),
-            options: Some(HashMap::from_iter(vec![
-                (
-                    format!("source"),
-                    format!("https://github.com/dbaron/wgmeeting-github-ircbot"),
-                ),
-                (
-                    format!("github_repos_allowed"),
-                    format!("dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo"),
-                ),
-                (
-                    // Use of a 0 value disables timeouts, which is needed to avoid intermittent
-                    // failures (using really-0 timeouts) or having the event loop wait until the
-                    // timeout completes (positive timeouts).
-                    format!("activity_timeout_minutes"),
-                    format!("0"),
-                ),
-            ])),
             ..Default::default()
         };
-        static ref OPTIONS : HashMap<String, String> = IRC_CONFIG.options.as_ref().expect("No options property within configuration?").clone();
+        static ref BOT_CONFIG: BotConfig = BotConfig {
+            source: "https://github.com/dbaron/wgmeeting-github-ircbot".to_string(),
+            github_repos_allowed: vec![
+                "dbaron/wgmeeting-github-ircbot".to_string(),
+                "dbaron/nonexistentrepo".to_string(),
+            ],
+            // Use of a 0 value disables timeouts, which is needed to avoid intermittent
+            // failures (using really-0 timeouts) or having the event loop wait until the
+            // timeout completes (positive timeouts).
+            activity_timeout_minutes: 0,
+            ..Default::default()
+        };
     }
 
     let mut irc_state_ = IRCState::new(GithubType::MockGithubConnection, &handle);
@@ -416,7 +404,7 @@ fn test_one_chat(path: &Path) -> bool {
                 }
             }).for_each(move |message| {
                 debug!("got IRC message");
-                process_irc_message(&irc_client, irc_state, &OPTIONS, message);
+                process_irc_message(&irc_client, irc_state, &BOT_CONFIG, message);
                 Ok(())
             })
                 .join(irc_outgoing_future)
