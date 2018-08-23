@@ -260,6 +260,7 @@ fn test_one_chat(path: &Path) -> bool {
             github_repos_allowed: vec![
                 "dbaron/wgmeeting-github-ircbot".to_string(),
                 "dbaron/nonexistentrepo".to_string(),
+                "upsuper/*".to_string(),
             ],
             // Use of a 0 value disables timeouts, which is needed to avoid intermittent
             // failures (using really-0 timeouts) or having the event loop wait until the
