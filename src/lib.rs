@@ -5,6 +5,11 @@
 //! combined with "Github:", "Github topic:", or "Github issue:" lines that
 //! give the github issue to comment in.
 
+// We need this for derive(Deserialize).
+#[allow(unused_extern_crates)]
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 extern crate futures;
 extern crate hubcaps;
 extern crate hyper;
@@ -36,8 +41,23 @@ use std::fmt;
 use std::fmt::Debug;
 use std::iter;
 use std::rc::Rc;
-use std::str::FromStr;
 use std::time::{Duration, Instant};
+
+/// Configuration of the bot.
+#[derive(Default, Deserialize)]
+pub struct BotConfig {
+    /// URL of the source code repo.
+    pub source: String,
+    /// Allowed GitHub repoes to post.
+    pub github_repos_allowed: Vec<String>,
+    /// UA String used for accessing GitHub.
+    pub github_uastring: String,
+    /// End activity after the given number of minutes.
+    pub activity_timeout_minutes: u64,
+    /// GitHub access token.
+    #[serde(skip)]
+    pub github_access_token: String,
+}
 
 #[derive(Copy, Clone)]
 /// Whether to use a real github connection for real use of the bot, or a fake
@@ -61,7 +81,7 @@ where
 pub fn process_irc_message(
     irc: &IrcClient,
     irc_state: &mut IRCState,
-    options: &'static HashMap<String, String>,
+    config: &'static BotConfig,
     message: Message,
 ) {
     match message.command {
@@ -94,7 +114,7 @@ pub fn process_irc_message(
                         info!("[{}] {}", source, line);
                         handle_bot_command(
                             &irc,
-                            options,
+                            config,
                             irc_state,
                             &line.message,
                             source,
@@ -107,7 +127,7 @@ pub fn process_irc_message(
                         match check_command_in_channel(mynick, &line.message) {
                             Some(ref command) => handle_bot_command(
                                 &irc,
-                                options,
+                                config,
                                 irc_state,
                                 command,
                                 target,
@@ -119,7 +139,7 @@ pub fn process_irc_message(
                                     // FIXME: refactor away clone
                                     let event_loop = irc_state.event_loop.clone();
                                     let mut this_channel_data =
-                                        irc_state.channel_data(target, options).borrow_mut();
+                                        irc_state.channel_data(target, config).borrow_mut();
                                     this_channel_data.add_line(&irc, target, event_loop, line);
                                 }
                             }
@@ -128,7 +148,7 @@ pub fn process_irc_message(
                         // FIXME: refactor away clone
                         let event_loop = irc_state.event_loop.clone();
 
-                        let this_channel_data_cell = irc_state.channel_data(target, options);
+                        let this_channel_data_cell = irc_state.channel_data(target, config);
                         this_channel_data_cell.borrow_mut().last_activity = Instant::now();
                         fn create_timeout(
                             irc: &IrcClient,
@@ -295,7 +315,7 @@ pub fn code_description() -> &'static String {
 
 fn handle_bot_command(
     irc: &IrcClient,
-    options: &'static HashMap<String, String>,
+    config: &'static BotConfig,
     irc_state: &mut IRCState,
     command: &str,
     response_target: &str,
@@ -341,7 +361,6 @@ fn handle_bot_command(
             );
         }
         "intro" => {
-            let config = irc.config();
             send_line(
                 None,
                 "My job is to leave comments in github when the group discusses github issues and \
@@ -355,11 +374,11 @@ fn handle_bot_command(
             send_line(
                 None,
                 &*format!(
-                    "I'm only allowed to comment on issues in the repositories: {}.",
-                    options["github_repos_allowed"]
+                    "I'm only allowed to comment on issues in the repositories: {:?}.",
+                    config.github_repos_allowed,
                 ),
             );
-            let owners = if let Some(v) = config.owners.as_ref() {
+            let owners = if let Some(v) = irc.config().owners.as_ref() {
                 v.join(" ")
             } else {
                 String::from("")
@@ -368,7 +387,8 @@ fn handle_bot_command(
                 None,
                 &*format!(
                     "My source code is at {} and I'm run by {}.",
-                    options["source"], owners
+                    config.source,
+                    owners,
                 ),
             );
         }
@@ -411,7 +431,7 @@ fn handle_bot_command(
             if response_target.starts_with('#') {
                 let event_loop = irc_state.event_loop.clone(); // FIXME: refactor away clone
                 let mut this_channel_data = irc_state
-                    .channel_data(response_target, options)
+                    .channel_data(response_target, config)
                     .borrow_mut();
                 this_channel_data.end_topic(irc, event_loop);
                 irc.send(Command::PART(
@@ -429,7 +449,7 @@ fn handle_bot_command(
             if response_target.starts_with('#') {
                 let event_loop = irc_state.event_loop.clone(); // FIXME: refactor away clone
                 let mut this_channel_data = irc_state
-                    .channel_data(response_target, options)
+                    .channel_data(response_target, config)
                     .borrow_mut();
                 this_channel_data.end_topic(irc, event_loop);
             } else {
@@ -503,7 +523,7 @@ impl IRCState {
     fn channel_data(
         &mut self,
         channel: &str,
-        options: &'static HashMap<String, String>,
+        config: &'static BotConfig,
     ) -> &Rc<RefCell<ChannelData>> {
         let github_type = self.github_type;
         self.channel_data
@@ -511,7 +531,7 @@ impl IRCState {
             .or_insert_with(|| {
                 Rc::new(RefCell::new(ChannelData::new(
                     channel,
-                    options,
+                    config,
                     github_type,
                 )))
             })
@@ -535,7 +555,7 @@ struct TopicData {
 struct ChannelData {
     channel_name: String,
     current_topic: Option<TopicData>,
-    options: &'static HashMap<String, String>,
+    config: &'static BotConfig,
     github_type: GithubType,
     last_activity: Instant,
     have_activity_timeout: bool,
@@ -699,18 +719,17 @@ where
 impl ChannelData {
     fn new(
         channel_name_: &str,
-        options_: &'static HashMap<String, String>,
+        config: &'static BotConfig,
         github_type_: GithubType,
     ) -> ChannelData {
-        let activity_timeout_duration_ = Duration::from_secs(
-            60u64 * u64::from_str(&*options_["activity_timeout_minutes"]).unwrap(),
-        );
+        let activity_timeout_duration_ =
+            Duration::from_secs(60 * config.activity_timeout_minutes);
         let use_activity_timeouts = activity_timeout_duration_ > Duration::from_secs(0);
 
         ChannelData {
             channel_name: String::from(channel_name_),
             current_topic: None,
-            options: options_,
+            config,
             github_type: github_type_,
             last_activity: Instant::now(),
             // If we're not using activity timeouts, disable them by pretending to already have
@@ -746,7 +765,7 @@ impl ChannelData {
         };
         match self.current_topic {
             None => {
-                let response = match extract_github_url(&line.message, self.options, &None, false) {
+                let response = match extract_github_url(&line.message, self.config, &None, false) {
                     (Some(_), None) => Some(String::from(
                         "I can't set a github URL because you haven't started a \
                          topic.",
@@ -764,7 +783,7 @@ impl ChannelData {
             }
             Some(ref mut data) => {
                 let (new_url_option, extract_failure_response) =
-                    extract_github_url(&line.message, self.options, &data.github_url, true);
+                    extract_github_url(&line.message, self.config, &data.github_url, true);
                 match (new_url_option.as_ref(), &data.github_url) {
                     (None, _) => {
                         let _ = extract_failure_response.map(respond_with);
@@ -777,7 +796,7 @@ impl ChannelData {
                     (Some(&Some(ref new_url)), ref old_url_option) => {
                         let new_url =
                             GithubURL::from_string(new_url.clone()).expect("regexp failure");
-                        let github = github_connection(&event_loop, self.options, self.github_type);
+                        let github = github_connection(&event_loop, self.config, self.github_type);
                         let respond_title_future = match github {
                             // When mocking the github connection for tests, pretend it's "TITLE".
                             // FIXME: When upgrading to futures 0.2, use left() and right() rather
@@ -850,7 +869,7 @@ impl ChannelData {
                     event_loop,
                     &*self.channel_name,
                     topic,
-                    self.options,
+                    self.config,
                     self.github_type,
                 );
                 task.run();
@@ -867,7 +886,7 @@ impl ChannelData {
 ///    will only be present if the first item is None
 fn extract_github_url(
     message: &str,
-    options: &HashMap<String, String>,
+    config: &BotConfig,
     current_github_url: &Option<String>,
     in_topic: bool,
 ) -> (Option<Option<String>>, Option<String>) {
@@ -879,7 +898,7 @@ fn extract_github_url(
             Regex::new(r"https://github.com/(?P<repo>[^/]*/[^/]*)/(issues|pull)/(?P<number>[0-9]+)")
             .unwrap();
     }
-    let ref allowed_repos = options["github_repos_allowed"];
+    let allowed_repos = &config.github_repos_allowed;
     if let Some(ref maybe_url) = strip_one_ci_prefix(
         &message,
         ["github:", "github topic:", "github issue:"].into_iter(),
@@ -887,11 +906,7 @@ fn extract_github_url(
         if maybe_url.to_lowercase() == "none" {
             (Some(None), None)
         } else if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
-            if allowed_repos
-                .split_whitespace()
-                .collect::<Vec<_>>()
-                .contains(&&caps["repo"])
-            {
+            if allowed_repos.iter().any(|r| r == &caps["repo"]) {
                 (Some(Some(String::from(&caps["issueurl"]))), None)
             } else {
                 (
@@ -899,7 +914,7 @@ fn extract_github_url(
                     Some(format!(
                         "I can't comment on that github issue because it's not in \
                          a repository I'm allowed to comment on, which are: {}.",
-                        allowed_repos
+                        allowed_repos.join(" "),
                     )),
                 )
             }
@@ -983,13 +998,13 @@ impl GithubURL {
 // mocking the connection.
 fn github_connection(
     event_loop: &Handle,
-    options: &HashMap<String, String>,
+    config: &BotConfig,
     github_type: GithubType,
 ) -> Option<Github<HttpsConnector<HttpConnector>>> {
     match github_type {
         GithubType::RealGithubConnection => Some(Github::new(
-            &*options["github_uastring"],
-            Some(Credentials::Token(options["github_access_token"].clone())),
+            config.github_uastring.as_str(),
+            Some(Credentials::Token(config.github_access_token.clone())),
             event_loop,
         )),
         GithubType::MockGithubConnection => None,
@@ -1012,10 +1027,10 @@ impl GithubCommentTask {
         event_loop_: Handle,
         response_target_: &str,
         data_: TopicData,
-        options: &HashMap<String, String>,
+        config: &BotConfig,
         github_type_: GithubType,
     ) -> GithubCommentTask {
-        let github_ = github_connection(&event_loop_, options, github_type_);
+        let github_ = github_connection(&event_loop_, config, github_type_);
         GithubCommentTask {
             irc: irc_.clone(),
             response_target: String::from(response_target_),
