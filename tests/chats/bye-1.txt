@@ -10,7 +10,7 @@
 <:dbaron!sid755@public.cloak PRIVMSG #testchannel2 :Florian: we need to figure out line-height first
 <:astearns!sid711@public.cloak PRIVMSG #testchannel2 :test-github-bot: bye?
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
-!The Working Group just discussed `step sizing`.
+!The Second Bot-Testing Working Group just discussed `step sizing`.
 !
 !<details><summary>The full IRC log of that discussion</summary>
 !&lt;dbaron> Topic: step sizing<br>

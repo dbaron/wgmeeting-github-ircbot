@@ -6,7 +6,7 @@
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :RESOLVED: publish a new working draft of selectors 4
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :Topic: values 3
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
-!The Working Group just discussed `selectors`, and agreed to the following:
+!The Bot-Testing Working Group just discussed `selectors`, and agreed to the following:
 !
 !* `RESOLVED: publish a new working draft of selectors 4`
 !
@@ -30,7 +30,7 @@
 <:dael!sid801@public.cloak PRIVMSG #meetingbottest :RESOLUTION publish a new working draft of values 3
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, end topic?
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/2
-!The Working Group just discussed `values 3`, and agreed to the following:
+!The Bot-Testing Working Group just discussed `values 3`, and agreed to the following:
 !
 !* `RESOLUTION publish a new working draft of values 3`
 !

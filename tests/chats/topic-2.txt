@@ -23,7 +23,7 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is a simple Test.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, end topic
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/3
-!The Working Group just discussed `line-height`.
+!The Bot-Testing Working Group just discussed `line-height`.
 !
 !<details><summary>The full IRC log of that discussion</summary>
 !&lt;dbaron> Topic: line-height<br>

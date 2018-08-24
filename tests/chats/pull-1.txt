@@ -4,7 +4,7 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Accept the PR.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: another topic
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/pull/1
-!The Working Group just discussed `proposed changes`.
+!The Bot-Testing Working Group just discussed `proposed changes`.
 !
 !<details><summary>The full IRC log of that discussion</summary>
 !&lt;dbaron> Topic: proposed changes<br>

@@ -259,7 +259,7 @@ fn test_one_chat(path: &Path) -> bool {
             source: "https://github.com/dbaron/wgmeeting-github-ircbot".to_string(),
             channels: vec![
                 (format!("#meetingbottest"), ChannelConfig {
-                    group: format!("Working Group"),
+                    group: format!("Bot-Testing Working Group"),
                     github_repos_allowed: vec![
                         "dbaron/wgmeeting-github-ircbot".to_string(),
                         "dbaron/nonexistentrepo".to_string(),
@@ -267,7 +267,7 @@ fn test_one_chat(path: &Path) -> bool {
                     ],
                 }),
                 (format!("#testchannel2"), ChannelConfig {
-                    group: format!("Working Group"),
+                    group: format!("Second Bot-Testing Working Group"),
                     github_repos_allowed: vec![
                         "dbaron/wgmeeting-github-ircbot".to_string(),
                     ],
