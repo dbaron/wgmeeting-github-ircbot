@@ -2,14 +2,16 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
 >PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1 (TITLE).\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is a simple Test.
-<:user2!~sid755@public.cloak INVITE test-github-bot #channel2
->JOIN #channel2
-<:user2!~sid755@public.cloak PRIVMSG #channel2 :Topic: Topic in second channel
-<:user3!~sid755@public.cloak PRIVMSG #channel2 :discussion in second channel
-<:user3!~sid755@public.cloak PRIVMSG #channel2 :Github Topic: https://github.com/dbaron/wgmeeting-github-ircbot/issues/7
->PRIVMSG #channel2 :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/7 (TITLE).\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #testchannel2 :test-github-bot, bye
+>PART #testchannel2 :Leaving at request of dbaron.  Feel free to /invite me back.
+<:user2!~sid755@public.cloak INVITE test-github-bot #testchannel2
+>JOIN #testchannel2
+<:user2!~sid755@public.cloak PRIVMSG #testchannel2 :Topic: Topic in second channel
+<:user3!~sid755@public.cloak PRIVMSG #testchannel2 :discussion in second channel
+<:user3!~sid755@public.cloak PRIVMSG #testchannel2 :Github Topic: https://github.com/dbaron/wgmeeting-github-ircbot/issues/7
+>PRIVMSG #testchannel2 :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/7 (TITLE).\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, reboot\u{1}
->PRIVMSG #meetingbottest :\u{1}ACTION dbaron, Sorry, I can\'t reboot right now because I have buffered topics in #channel2 #meetingbottest.\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION dbaron, Sorry, I can\'t reboot right now because I have buffered topics in #meetingbottest #testchannel2.\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: another topic
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
 !The Working Group just discussed `line-height`.
@@ -22,7 +24,7 @@
 !
 !!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
 >PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
-<:user2!~sid755@public.cloak PRIVMSG #channel2 :test-github-bot, end topic
+<:user2!~sid755@public.cloak PRIVMSG #testchannel2 :test-github-bot, end topic
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/7
 !The Working Group just discussed `Topic in second channel`.
 !
@@ -33,4 +35,4 @@
 !</details>
 !
 !!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/7
->PRIVMSG #channel2 :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/7\u{1}
+>PRIVMSG #testchannel2 :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/7\u{1}

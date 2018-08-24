@@ -49,6 +49,7 @@ fn read_config() -> Config {
         serde_json::from_reader(file).expect("couldn't load configuration file");
     config.bot.github_access_token =
         fs::read_to_string(token_file).expect("couldn't read github access token file");
+    config.irc.channels = Some(config.bot.channels.keys().cloned().collect());
     config
 }
 

@@ -43,13 +43,22 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 use tokio_core::reactor::{Handle, Timeout};
 
+/// Configuration for a single IRC channel.
+#[derive(Default, Deserialize)]
+pub struct ChannelConfig {
+    /// The name of the working group that uses this channel.
+    pub group: String,
+    /// GitHub repos that the bot can make comments on.
+    pub github_repos_allowed: Vec<String>,
+}
+
 /// Configuration of the bot.
 #[derive(Default, Deserialize)]
 pub struct BotConfig {
     /// URL of the source code repo.
     pub source: String,
-    /// Allowed GitHub repoes to post.
-    pub github_repos_allowed: Vec<String>,
+    /// IRC channels the bot should join, with data about them
+    pub channels: HashMap<String, ChannelConfig>,
     /// UA String used for accessing GitHub.
     pub github_uastring: String,
     /// End activity after the given number of minutes.
@@ -208,8 +217,8 @@ pub fn process_irc_message(
             }
         }
         Command::INVITE(ref target, ref channel) => {
-            if target == irc.current_nickname() {
-                // Join channels when invited.
+            if target == irc.current_nickname() && config.channels.get(channel).is_some() {
+                // Join configured channels when re-invited.
                 irc.send_join(channel).unwrap();
             }
         }
@@ -372,13 +381,15 @@ fn handle_bot_command(
                 "I separate discussions by the \"Topic:\" lines, and I know what github issues to \
                  use only by lines of the form \"GitHub: <url> | none\".",
             );
-            send_line(
-                None,
-                &*format!(
-                    "I'm only allowed to comment on issues in the repositories: {:?}.",
-                    config.github_repos_allowed,
-                ),
-            );
+            if response_target.starts_with('#') {
+                send_line(
+                    None,
+                    &*format!(
+                        "In this channel, I'm only allowed to comment on issues in the repositories: {:?}.",
+                        config.channels[response_target].github_repos_allowed,
+                    ),
+                );
+            }
             let owners = if let Some(v) = irc.config().owners.as_ref() {
                 v.join(" ")
             } else {
@@ -540,6 +551,7 @@ struct ChannelLine {
 
 struct TopicData {
     topic: String,
+    group: String,
     github_url: Option<String>,
     lines: Vec<ChannelLine>,
     resolutions: Vec<String>,
@@ -567,10 +579,12 @@ impl fmt::Display for ChannelLine {
 }
 
 impl TopicData {
-    fn new(topic: &str) -> TopicData {
+    fn new(topic: &str, group: &str) -> TopicData {
         let topic_ = String::from(topic);
+        let group_ = String::from(group);
         TopicData {
             topic: topic_,
+            group: group_,
             github_url: None,
             lines: vec![],
             resolutions: vec![],
@@ -637,23 +651,20 @@ impl fmt::Display for TopicData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Use `...` around the topic and resolutions, and ```-escaping around
         // the IRC log to avoid most concern about escaping.
-        if self.resolutions.len() == 0 {
-            try!(write!(
-                f,
-                "The Working Group just discussed {}.\n",
-                if self.topic == "" {
-                    String::from("this issue")
-                } else {
-                    escape_as_code_span(&*self.topic)
-                }
-            ));
-        } else {
-            try!(write!(
-                f,
-                "The Working Group just discussed {}, and agreed to the \
-                 following:\n\n",
+        try!(write!(
+            f,
+            "The {} just discussed {}",
+            self.group,
+            if self.topic == "" {
+                String::from("this issue")
+            } else {
                 escape_as_code_span(&*self.topic)
-            ));
+            }
+        ));
+        if self.resolutions.len() == 0 {
+            try!(write!(f, ".\n"));
+        } else {
+            try!(write!(f, ", and agreed to the following:\n\n"));
             for resolution in &self.resolutions {
                 try!(write!(f, "* {}\n", escape_as_code_span(&*resolution)));
             }
@@ -757,25 +768,26 @@ impl ChannelData {
         };
         match self.current_topic {
             None => {
-                let response = match extract_github_url(&line.message, self.config, &None, false) {
-                    (Some(_), None) => Some(String::from(
-                        "I can't set a github URL because you haven't started a \
-                         topic.",
-                    )),
-                    (None, Some(ref extract_response)) => Some(
-                        String::from(
-                            "I can't set a github URL because you haven't started a topic.  \
-                             Also, ",
-                        ) + extract_response,
-                    ),
-                    (None, None) => None,
-                    _ => panic!("unexpected state"),
-                };
+                let response =
+                    match extract_github_url(&line.message, self.config, target, &None, false) {
+                        (Some(_), None) => Some(String::from(
+                            "I can't set a github URL because you haven't started a \
+                             topic.",
+                        )),
+                        (None, Some(ref extract_response)) => Some(
+                            String::from(
+                                "I can't set a github URL because you haven't started a topic.  \
+                                 Also, ",
+                            ) + extract_response,
+                        ),
+                        (None, None) => None,
+                        _ => panic!("unexpected state"),
+                    };
                 let _ = response.map(respond_with);
             }
             Some(ref mut data) => {
                 let (new_url_option, extract_failure_response) =
-                    extract_github_url(&line.message, self.config, &data.github_url, true);
+                    extract_github_url(&line.message, self.config, target, &data.github_url, true);
                 match (new_url_option.as_ref(), &data.github_url) {
                     (None, _) => {
                         let _ = extract_failure_response.map(respond_with);
@@ -848,7 +860,13 @@ impl ChannelData {
     // FIXME: Move this to be a method on IRCState.
     fn start_topic(&mut self, irc: &IrcClient, event_loop: Handle, topic: &str) {
         self.end_topic(irc, event_loop);
-        self.current_topic = Some(TopicData::new(topic));
+        let group = &self
+            .config
+            .channels
+            .get(&self.channel_name)
+            .expect("How are we in an unconfigured channel?")
+            .group;
+        self.current_topic = Some(TopicData::new(topic, group));
     }
 
     // FIXME: Move this to be a method on IRCState.
@@ -879,6 +897,7 @@ impl ChannelData {
 fn extract_github_url(
     message: &str,
     config: &BotConfig,
+    target: &String,
     current_github_url: &Option<String>,
     in_topic: bool,
 ) -> (Option<Option<String>>, Option<String>) {
@@ -890,7 +909,6 @@ fn extract_github_url(
             Regex::new(r"https://github.com/(?P<repo>[^/]*/[^/]*)/(issues|pull)/(?P<number>[0-9]+)")
             .unwrap();
     }
-    let allowed_repos = &config.github_repos_allowed;
     if let Some(ref maybe_url) = strip_one_ci_prefix(
         &message,
         ["github:", "github topic:", "github issue:"].into_iter(),
@@ -898,26 +916,35 @@ fn extract_github_url(
         if maybe_url.to_lowercase() == "none" {
             (Some(None), None)
         } else if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
-            let is_allowed = allowed_repos.iter().any(|r| {
-                let pos = match r.find('/') {
-                    Some(pos) => pos,
-                    None => return false,
-                };
-                let (owner, repo) = r.split_at(pos);
-                let repo = &repo[1..];
-                owner == &caps["owner"] && (repo == &caps["repo"] || repo == "*")
-            });
-            if is_allowed {
-                (Some(Some(String::from(&caps["issueurl"]))), None)
-            } else {
+            let channel_config = config.channels.get(target);
+            if channel_config.is_none() {
                 (
                     None,
-                    Some(format!(
-                        "I can't comment on that github issue because it's not in \
-                         a repository I'm allowed to comment on, which are: {}.",
-                        allowed_repos.join(" "),
-                    )),
+                    Some(String::from("I can't comment on that github issue because I don't have a configuration of allowed repositories for this channel.")),
                 )
+            } else {
+                let allowed_repos = &channel_config.unwrap().github_repos_allowed;
+                let is_allowed = allowed_repos.iter().any(|r| {
+                    let pos = match r.find('/') {
+                        Some(pos) => pos,
+                        None => return false,
+                    };
+                    let (owner, repo) = r.split_at(pos);
+                    let repo = &repo[1..];
+                    owner == &caps["owner"] && (repo == &caps["repo"] || repo == "*")
+                });
+                if is_allowed {
+                    (Some(Some(String::from(&caps["issueurl"]))), None)
+                } else {
+                    (
+                        None,
+                        Some(format!(
+                            "I can't comment on that github issue because it's not in \
+                             a repository I'm allowed to comment on, which are: {}.",
+                            allowed_repos.join(" "),
+                        )),
+                    )
+                }
             }
         } else {
             (

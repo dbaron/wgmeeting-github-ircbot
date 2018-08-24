@@ -1,12 +1,14 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, bye
 >PART #meetingbottest :Leaving at request of dbaron.  Feel free to /invite me back.
-<:user2!~sid463@public.cloak INVITE test-github-bot #css
->JOIN #css
-<:dbaron!sid755@public.cloak PRIVMSG #css :Topic: step sizing
-<:dbaron!sid755@public.cloak PRIVMSG #css :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
->PRIVMSG #css :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1 (TITLE).\u{1}
-<:dbaron!sid755@public.cloak PRIVMSG #css :Florian: we need to figure out line-height first
-<:astearns!sid711@public.cloak PRIVMSG #css :test-github-bot: bye?
+<:dbaron!sid755@public.cloak PRIVMSG #testchannel2 :test-github-bot, bye
+>PART #testchannel2 :Leaving at request of dbaron.  Feel free to /invite me back.
+<:user2!~sid463@public.cloak INVITE test-github-bot #testchannel2
+>JOIN #testchannel2
+<:dbaron!sid755@public.cloak PRIVMSG #testchannel2 :Topic: step sizing
+<:dbaron!sid755@public.cloak PRIVMSG #testchannel2 :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #testchannel2 :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1 (TITLE).\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #testchannel2 :Florian: we need to figure out line-height first
+<:astearns!sid711@public.cloak PRIVMSG #testchannel2 :test-github-bot: bye?
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
 !The Working Group just discussed `step sizing`.
 !
@@ -17,5 +19,5 @@
 !</details>
 !
 !!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
->PRIVMSG #css :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
->PART #css :Leaving at request of astearns.  Feel free to /invite me back.
+>PRIVMSG #testchannel2 :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
+>PART #testchannel2 :Leaving at request of astearns.  Feel free to /invite me back.

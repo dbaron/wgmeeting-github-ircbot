@@ -245,7 +245,7 @@ fn test_one_chat(path: &Path) -> bool {
             port: Some(43210),
             use_ssl: Some(false),
             encoding: Some(format!("UTF-8")),
-            channels: Some(vec![format!("#meetingbottest")]),
+            channels: Some(vec![format!("#meetingbottest"), format!("#testchannel2")]),
             user_info: Some(format!("Bot to add meeting minutes to github issues.")),
 
             // In testing mode, we send the github comments as IRC messages, so we
@@ -257,11 +257,22 @@ fn test_one_chat(path: &Path) -> bool {
         };
         static ref BOT_CONFIG: BotConfig = BotConfig {
             source: "https://github.com/dbaron/wgmeeting-github-ircbot".to_string(),
-            github_repos_allowed: vec![
-                "dbaron/wgmeeting-github-ircbot".to_string(),
-                "dbaron/nonexistentrepo".to_string(),
-                "upsuper/*".to_string(),
-            ],
+            channels: vec![
+                (format!("#meetingbottest"), ChannelConfig {
+                    group: format!("Working Group"),
+                    github_repos_allowed: vec![
+                        "dbaron/wgmeeting-github-ircbot".to_string(),
+                        "dbaron/nonexistentrepo".to_string(),
+                        "upsuper/*".to_string(),
+                    ],
+                }),
+                (format!("#testchannel2"), ChannelConfig {
+                    group: format!("Working Group"),
+                    github_repos_allowed: vec![
+                        "dbaron/wgmeeting-github-ircbot".to_string(),
+                    ],
+                }),
+            ].into_iter().collect(),
             // Use of a 0 value disables timeouts, which is needed to avoid intermittent
             // failures (using really-0 timeouts) or having the event loop wait until the
             // timeout completes (positive timeouts).
