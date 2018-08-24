@@ -21,7 +21,7 @@
           "w3c/fxtf-drafts",
           "w3c/css-houdini-drafts",
           "w3c/svgwg",
-          "w3c/web-platform-tests",
+          "web-platform-tests/wpt",
           "WICG/animation-worklet"
         ]
       },
@@ -32,7 +32,7 @@
           "w3c/fxtf-drafts",
           "w3c/css-houdini-drafts",
           "w3c/svgwg",
-          "w3c/web-platform-tests",
+          "web-platform-tests/wpt",
           "WICG/animation-worklet"
         ]
       },
@@ -43,7 +43,7 @@
           "w3c/fxtf-drafts",
           "w3c/css-houdini-drafts",
           "w3c/svgwg",
-          "w3c/web-platform-tests",
+          "web-platform-tests/wpt",
           "WICG/animation-worklet"
         ]
       },
@@ -83,7 +83,7 @@
           "w3c/fxtf-drafts",
           "w3c/css-houdini-drafts",
           "w3c/svgwg",
-          "w3c/web-platform-tests",
+          "web-platform-tests/wpt",
           "w3c/svg-aam",
           "w3c/graphics-aam",
           "w3c/graphics-aria"
