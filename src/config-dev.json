@@ -13,16 +13,16 @@
   },
   "bot": {
     "source": "https://github.com/dbaron/wgmeeting-github-ircbot",
-    "channels": {
-      "#cssbottest": {
-        "group": "github-bot testing Working Group",
-        "github_repos_allowed": [
-          "dbaron/wgmeeting-github-ircbot"
-        ]
-      }
-    },
     "github_uastring": "wgmeeting-github-ircbot/0.1.0",
     "activity_timeout_minutes": 90
+  },
+  "channels": {
+    "#cssbottest": {
+      "group": "github-bot testing Working Group",
+      "github_repos_allowed": [
+        "dbaron/wgmeeting-github-ircbot"
+      ]
+    }
   }
 }
 
