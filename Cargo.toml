@@ -18,10 +18,10 @@ hyper = "0.11" # should update to 0.12
 hyper-tls = "0.1" # should update to 0.3
 serde = "1.0"
 serde_derive = "1.0"
-serde_json = "1.0"
 diff = "0.1"
+toml = "0.4"
 
 [dependencies.irc]
 version = "0.13"
 default-features = false
-features = ["ctcp", "json"]
+features = ["ctcp"]

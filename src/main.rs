@@ -12,24 +12,19 @@ extern crate irc;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_json;
 extern crate tokio_core;
+extern crate toml;
 extern crate wgmeeting_github_ircbot;
 
 use irc::client::prelude::{Client, ClientExt, Config as IrcConfig, Future, IrcClient, Stream};
 use irc::client::PackedIrcClient;
+use std::collections::HashMap;
 use std::env;
-use std::fs::{self, File};
+use std::fs;
 use tokio_core::reactor::Core;
 use wgmeeting_github_ircbot::*;
 
-#[derive(Deserialize)]
-struct Config {
-    irc: IrcConfig,
-    bot: BotConfig,
-}
-
-fn read_config() -> Config {
+fn read_config() -> (IrcConfig, BotConfig) {
     let mut args = env::args_os();
     if args.len() != 3 {
         eprintln!(
@@ -44,18 +39,25 @@ fn read_config() -> Config {
         args.next().unwrap(),
     );
 
-    let file = File::open(config_file).expect("couldn't open configuration file");
+    #[derive(Deserialize)]
+    struct Config {
+        irc: IrcConfig,
+        bot: BotConfig,
+        channels: HashMap<String, ChannelConfig>,
+    }
+    let file = fs::read(config_file).expect("couldn't load configuration file");
     let mut config: Config =
-        serde_json::from_reader(file).expect("couldn't load configuration file");
+        toml::from_slice(&file).expect("couldn't parse configuration file");
     config.bot.github_access_token =
         fs::read_to_string(token_file).expect("couldn't read github access token file");
-    config.irc.channels = Some(config.bot.channels.keys().cloned().collect());
-    config
+    config.irc.channels = Some(config.channels.keys().cloned().collect());
+    config.bot.channels = config.channels;
+    (config.irc, config.bot)
 }
 
 fn main() {
     env_logger::init();
-    let config: &'static Config = Box::leak(Box::new(read_config()));
+    let (irc_config, bot_config): &'static (_, _) = Box::leak(Box::new(read_config()));
 
     // FIXME: Add a way to ask the bot to reboot itself?
 
@@ -63,7 +65,7 @@ fn main() {
     let handle = core.handle();
     let mut irc_state = IRCState::new(GithubType::RealGithubConnection, &handle);
 
-    let irc_client_future = IrcClient::new_future(handle, &config.irc).expect(
+    let irc_client_future = IrcClient::new_future(handle, irc_config).expect(
         "Couldn't initialize server \
          with given configuration file",
     );
@@ -73,7 +75,7 @@ fn main() {
     irc.identify().unwrap();
 
     let ircstream = irc.stream().for_each(|message| {
-        process_irc_message(&irc, &mut irc_state, &config.bot, message);
+        process_irc_message(&irc, &mut irc_state, bot_config, message);
         Ok(())
     });
 

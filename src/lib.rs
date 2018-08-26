@@ -58,6 +58,7 @@ pub struct BotConfig {
     /// URL of the source code repo.
     pub source: String,
     /// IRC channels the bot should join, with data about them
+    #[serde(skip)]
     pub channels: HashMap<String, ChannelConfig>,
     /// UA String used for accessing GitHub.
     pub github_uastring: String,
