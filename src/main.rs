@@ -12,15 +12,15 @@ extern crate irc;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_json;
 extern crate tokio_core;
+extern crate toml;
 extern crate wgmeeting_github_ircbot;
 
 use irc::client::prelude::{Client, ClientExt, Config as IrcConfig, Future, IrcClient, Stream};
 use irc::client::PackedIrcClient;
 use std::collections::HashMap;
 use std::env;
-use std::fs::{self, File};
+use std::fs;
 use tokio_core::reactor::Core;
 use wgmeeting_github_ircbot::*;
 
@@ -45,9 +45,9 @@ fn read_config() -> (IrcConfig, BotConfig) {
         bot: BotConfig,
         channels: HashMap<String, ChannelConfig>,
     }
-    let file = File::open(config_file).expect("couldn't open configuration file");
+    let file = fs::read(config_file).expect("couldn't load configuration file");
     let mut config: Config =
-        serde_json::from_reader(file).expect("couldn't load configuration file");
+        toml::from_slice(&file).expect("couldn't parse configuration file");
     config.bot.github_access_token =
         fs::read_to_string(token_file).expect("couldn't read github access token file");
     config.irc.channels = Some(config.channels.keys().cloned().collect());
