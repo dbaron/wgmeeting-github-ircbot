@@ -93,5 +93,5 @@ github_repos_allowed = [
 [channels."#w3process"]
 group = "Revising W3C Process CG"
 github_repos_allowed = [
-    "w3c/w3process/",
+    "w3c/w3process",
 ]
