@@ -89,3 +89,9 @@ github_repos_allowed = [
     "w3c/graphics-aam",
     "w3c/graphics-aria",
 ]
+
+[channels."#w3process"]
+group = "Revising W3C Process CG"
+github_repos_allowed = [
+    "w3c/w3process",
+]
