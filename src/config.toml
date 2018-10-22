@@ -24,6 +24,7 @@ github_repos_allowed = [
     "w3c/svgwg",
     "web-platform-tests/wpt",
     "WICG/animation-worklet",
+    "WICG/scroll-animations",
 ]
 
 [channels."#fx"]
@@ -35,6 +36,7 @@ github_repos_allowed = [
     "w3c/svgwg",
     "web-platform-tests/wpt",
     "WICG/animation-worklet",
+    "WICG/scroll-animations",
 ]
 
 [channels."#houdini"]
@@ -46,6 +48,7 @@ github_repos_allowed = [
     "w3c/svgwg",
     "web-platform-tests/wpt",
     "WICG/animation-worklet",
+    "WICG/scroll-animations",
 ]
 
 [channels."#tt"]
