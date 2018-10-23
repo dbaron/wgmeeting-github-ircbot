@@ -106,7 +106,7 @@ github_repos_allowed = [
     "w3c/ambient-light",
     "w3c/proximity",
     "w3c/geolocation-sensor",
-    "w3c/battery/",
+    "w3c/battery",
     "w3c/wake-lock/",
     "web-platform-tests/wpt",
 ]
