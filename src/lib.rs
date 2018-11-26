@@ -801,7 +801,7 @@ impl ChannelData {
                     (Some(&Some(ref new_url)), ref old_url_option) => {
                         let new_url =
                             GithubURL::from_string(new_url.clone()).expect("regexp failure");
-                        let github = github_connection(&event_loop, self.config, self.github_type);
+                        let github = github_connection(self.config, self.github_type);
                         let respond_title_future = match github {
                             // When mocking the github connection for tests, pretend it's "TITLE".
                             // FIXME: When upgrading to futures 0.2, use left() and right() rather
@@ -1026,7 +1026,6 @@ impl GithubURL {
 // Return Some(connection) when we're really connecting and None if we're
 // mocking the connection.
 fn github_connection(
-    event_loop: &Handle,
     config: &BotConfig,
     github_type: GithubType,
 ) -> Option<Github<HttpsConnector<HttpConnector>>> {
@@ -1034,7 +1033,6 @@ fn github_connection(
         GithubType::RealGithubConnection => Some(Github::new(
             config.github_uastring.as_str(),
             Some(Credentials::Token(config.github_access_token.clone())),
-            event_loop,
         )),
         GithubType::MockGithubConnection => None,
     }
@@ -1059,7 +1057,7 @@ impl GithubCommentTask {
         config: &BotConfig,
         github_type_: GithubType,
     ) -> GithubCommentTask {
-        let github_ = github_connection(&event_loop_, config, github_type_);
+        let github_ = github_connection(config, github_type_);
         GithubCommentTask {
             irc: irc_.clone(),
             response_target: String::from(response_target_),
