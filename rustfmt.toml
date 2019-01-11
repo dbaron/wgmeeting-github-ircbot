@@ -1,11 +1,11 @@
 # documentation at "rustfmt --config-help"
 # documentation at https://github.com/rust-lang-nursery/rustfmt/blob/master/src/config.rs
-error_on_line_overflow = false
+#error_on_line_overflow = false # only available on nightly channel
 wrap_comments = true
-format_strings = true
+#format_strings = true # only available on nightly channel
 normalize_comments = true
 
-reorder_imports = true
-reorder_imported_names = true
+#reorder_imports = true # only available on nightly channel
+#reorder_imported_names = true # only available on nightly channel
 
-spaces_around_ranges = true
+#spaces_around_ranges = true # only available on nightly channel
