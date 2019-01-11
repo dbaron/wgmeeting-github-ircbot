@@ -71,29 +71,31 @@ If you want to use the bot to generate real GitHub comments, you'll need
 to [generate a GitHub personal access
 token](https://github.com/settings/tokens) while logged in to the GitHub
 account that you want to make the comments, and put the personal access
-token in the `github_access_token` field in 
-in `./src/config.json`.  Then you can compile and run the bot with a
-single [`cargo`](http://doc.crates.io/) command, such as one of:
+token in a file (say, `./github_access_token_file`).  Then you can
+compile and run the bot with a single [`cargo`](http://doc.crates.io/)
+command, such as one of:
 
-    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run ./src/config-dev.json
-    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run --release ./src/config.json
+    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run ./src/config-dev.toml ./github_access_token_file
+    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot cargo run --release ./src/config.toml ./github_access_token_file
 
 Or you could just run automated tests with a different single `cargo`
 command (which doesn't require an access token):
 
     RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot,test_chats cargo test
 
+or for more verbosity:
+
+    RUST_BACKTRACE=1 RUST_LOG=wgmeeting_github_ircbot,test_chats,tokio_core,tokio_reactor cargo test
+
 # Do you want this bot for your working group?
 
 If you want this bot for your working group that minutes its
 teleconferences on `irc.w3.org`, I'm happy to take pull requests to this
-repository.  You need to change two things in `src/config.json`:
-
-* the `github_repos_allowed` line, which lists github repositories that
-  the bot is allowed to comment in, and
-* the `channels` line, which lists the IRC channel that the bot joins
-  when it starts.  (`/invite` works for temporary channels, but it
-  doesn't persist across restarting the bot.)
+repository.  You need to add a new `channels` item in `src/config.toml`.
+The channel name in the header gives the IRC channel, the `group` gives
+the name of the working group used in comments on github issues, and the
+`github_repos_allowed` line lists github repositories that the bot is
+allowed to comment in.
 
 # Acknowledgments
 

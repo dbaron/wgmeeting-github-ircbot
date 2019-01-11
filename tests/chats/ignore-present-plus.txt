@@ -1,6 +1,6 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: The first topic of the meeting
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
->PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1 (TITLE).\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Present+
 <:fantasai!sid755@public.cloak PRIVMSG #meetingbottest :present+
 <:TabAtkins!sid755@public.cloak PRIVMSG #meetingbottest :present+ Tab
@@ -9,7 +9,7 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Please record your present+.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: another topic
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
-!The Working Group just discussed `The first topic of the meeting`.
+!The Bot-Testing Working Group just discussed `The first topic of the meeting`.
 !
 !<details><summary>The full IRC log of that discussion</summary>
 !&lt;dbaron> Topic: The first topic of the meeting<br>

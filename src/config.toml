@@ -1,0 +1,118 @@
+[irc]
+owners = ["dbaron"]
+nickname = "github-bot"
+alt_nicks = ["github-bot-", "github-bot--"]
+username = "dbaron-gh-bot"
+realname = "Bot to add meeting minutes to github issues."
+server = "irc.w3.org"
+port = 994
+use_ssl = true
+encoding = "UTF-8"
+user_info = "Bot to add meeting minutes to github issues."
+
+[bot]
+source = "https://github.com/dbaron/wgmeeting-github-ircbot"
+github_uastring = "wgmeeting-github-ircbot/0.1.0"
+activity_timeout_minutes = 90
+
+[channels."#css"]
+group = "CSS Working Group"
+github_repos_allowed = [
+    "w3c/csswg-drafts",
+    "w3c/fxtf-drafts",
+    "w3c/css-houdini-drafts",
+    "w3c/svgwg",
+    "web-platform-tests/wpt",
+    "WICG/animation-worklet",
+    "WICG/scroll-animations",
+]
+
+[channels."#fx"]
+group = "CSS Working Group"
+github_repos_allowed = [
+    "w3c/csswg-drafts",
+    "w3c/fxtf-drafts",
+    "w3c/css-houdini-drafts",
+    "w3c/svgwg",
+    "web-platform-tests/wpt",
+    "WICG/animation-worklet",
+    "WICG/scroll-animations",
+]
+
+[channels."#houdini"]
+group = "Houdini Task Force"
+github_repos_allowed = [
+    "w3c/csswg-drafts",
+    "w3c/fxtf-drafts",
+    "w3c/css-houdini-drafts",
+    "w3c/svgwg",
+    "web-platform-tests/wpt",
+    "WICG/animation-worklet",
+    "WICG/scroll-animations",
+]
+
+[channels."#tt"]
+group = "Timed Text Working Group"
+github_repos_allowed = [
+    "w3c/imsc",
+    "w3c/ttml1",
+    "w3c/ttml2",
+    "w3c/imsc-tests",
+    "w3c/imsc-vnext-reqs",
+    "w3c/tt-profile-registry",
+    "w3c/webvtt",
+    "w3c/png-hdr-pq",
+]
+
+[channels."#pwg"]
+group = "Publishing Working Group"
+github_repos_allowed = [
+    "w3c/wpub",
+    "w3c/pwpub",
+    "w3c/epub4",
+    "w3c/dpub-aria-2.0",
+    "w3c/publ-wg",
+]
+
+[channels."#aria-apg"]
+group = "ARIA Authoring Practices (APG) Task Force"
+github_repos_allowed = [
+    "w3c/aria-practices",
+]
+
+[channels."#svg"]
+group = "SVG Working Group"
+github_repos_allowed = [
+    "w3c/csswg-drafts",
+    "w3c/fxtf-drafts",
+    "w3c/css-houdini-drafts",
+    "w3c/svgwg",
+    "web-platform-tests/wpt",
+    "w3c/svg-aam",
+    "w3c/graphics-aam",
+    "w3c/graphics-aria",
+]
+
+[channels."#dap"]
+group = "Devices and Sensors Working Group"
+github_repos_allowed = [
+    "w3c/sensors",
+    "w3c/accelerometer",
+    "w3c/gyroscope",
+    "w3c/magnetometer",
+    "w3c/orientation-sensor",
+    "w3c/deviceorientation",
+    "w3c/motion-sensors",
+    "w3c/ambient-light",
+    "w3c/proximity",
+    "w3c/geolocation-sensor",
+    "w3c/battery",
+    "w3c/wake-lock",
+    "web-platform-tests/wpt",
+]
+
+[channels."#w3process"]
+group = "Revising W3C Process CG"
+github_repos_allowed = [
+    "w3c/w3process",
+]
