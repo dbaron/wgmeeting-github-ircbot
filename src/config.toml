@@ -87,6 +87,15 @@ github_repos_allowed = [
     "w3c/aria-practices",
 ]
 
+[channels."#aria"]
+group = "ARIA Working Group"
+github_repos_allowed = [
+    "w3c/aria",
+    "w3c/aria-common",
+    "w3c/core-aam",
+    "w3c/accname"
+]
+
 [channels."#svg"]
 group = "SVG Working Group"
 github_repos_allowed = [
