@@ -451,7 +451,8 @@ fn handle_bot_command(
                         "Leaving at request of {}.  Feel free to /invite me back.",
                         response_username.unwrap()
                     )),
-                )).unwrap();
+                ))
+                .unwrap();
             } else {
                 send_line(response_username, "'bye' only works in a channel");
             }
@@ -484,7 +485,8 @@ fn handle_bot_command(
                     "{}, rebooting at request of {}.",
                     &*code_description(),
                     response_username.unwrap()
-                )))).unwrap();
+                ))))
+                .unwrap();
 
                 // exit, and assume whatever started the bot will restart it
                 unimplemented!(); // This will exit.  Maybe do something cleaner later?
@@ -753,12 +755,16 @@ impl ChannelData {
         line: ChannelLine,
     ) {
         match line.is_action {
-            false => if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
-                self.start_topic(irc, event_loop.clone(), topic);
-            },
-            true => if line.source == "trackbot" && line.message == "is ending a teleconference." {
-                self.end_topic(irc, event_loop.clone());
-            },
+            false => {
+                if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
+                    self.start_topic(irc, event_loop.clone(), topic);
+                }
+            }
+            true => {
+                if line.source == "trackbot" && line.message == "is ending a teleconference." {
+                    self.end_topic(irc, event_loop.clone());
+                }
+            }
         };
         let respond_with = {
             let irc = irc.clone();
