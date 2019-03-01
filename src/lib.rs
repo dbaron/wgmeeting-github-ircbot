@@ -1140,15 +1140,9 @@ impl GithubCommentTask {
                                     if remove_from_agenda {
                                         // We had resolutions, so remove the "Agenda+" and
                                         // "Agenda+ F2F" tags, if present.
-
-                                        // Explicitly discard any errors.  That's because
-                                        // this might give an error if the label isn't
-                                        // present.
-                                        // FIXME:  But it might also give a (different)
-                                        // error if we don't have write access to the
-                                        // repository, so we really ought to distinguish,
-                                        // and report the latter.
                                         for label in ["Agenda+", "Agenda+ F2F"].into_iter() {
+                                            // Test for presence of the label first, so that we can
+                                            // report errors when removing it.
                                             if labels_vec.iter().any(|ref l| l.name == *label) {
                                                 let success_str = format!(" and removed the \"{}\" label", label);
                                                 label_tasks.push(labels.remove(label).then({
