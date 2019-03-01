@@ -261,7 +261,7 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
         return None;
     }
     let after_punct = &after_nick[1..];
-    Some(String::from(after_punct.trim_left()))
+    Some(String::from(after_punct.trim_start()))
 }
 
 fn send_irc_line(irc: &IrcClient, target: &str, is_action: bool, line: String) {
@@ -318,7 +318,7 @@ pub fn code_description() -> &'static String {
             "{} version {}, compiled from {}",
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),
-            include_str!(concat!(env!("OUT_DIR"), "/git-hash")).trim_right()
+            include_str!(concat!(env!("OUT_DIR"), "/git-hash")).trim_end()
         );
     }
     &CODE_DESCRIPTION
@@ -703,7 +703,7 @@ fn ci_starts_with(s: &str, prefix: &str) -> bool {
 /// present return the rest of the line.
 fn strip_ci_prefix(s: &str, prefix: &str) -> Option<String> {
     if ci_starts_with(s, prefix) {
-        Some(String::from(s[prefix.len()..].trim_left()))
+        Some(String::from(s[prefix.len()..].trim_start()))
     } else {
         None
     }
