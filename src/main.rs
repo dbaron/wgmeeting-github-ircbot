@@ -46,8 +46,7 @@ fn read_config() -> (IrcConfig, BotConfig) {
         channels: HashMap<String, ChannelConfig>,
     }
     let file = fs::read(config_file).expect("couldn't load configuration file");
-    let mut config: Config =
-        toml::from_slice(&file).expect("couldn't parse configuration file");
+    let mut config: Config = toml::from_slice(&file).expect("couldn't parse configuration file");
     config.bot.github_access_token =
         fs::read_to_string(token_file).expect("couldn't read github access token file");
     config.irc.channels = Some(config.channels.keys().cloned().collect());

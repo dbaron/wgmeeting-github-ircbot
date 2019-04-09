@@ -5,7 +5,7 @@ wrap_comments = true
 #format_strings = true # only available on nightly channel
 normalize_comments = true
 
-#reorder_imports = true # only available on nightly channel
+reorder_imports = true
 #reorder_imported_names = true # only available on nightly channel
 
 #spaces_around_ranges = true # only available on nightly channel

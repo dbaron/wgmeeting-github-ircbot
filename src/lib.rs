@@ -261,7 +261,7 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
         return None;
     }
     let after_punct = &after_nick[1..];
-    Some(String::from(after_punct.trim_left()))
+    Some(String::from(after_punct.trim_start()))
 }
 
 fn send_irc_line(irc: &IrcClient, target: &str, is_action: bool, line: String) {
@@ -318,7 +318,7 @@ pub fn code_description() -> &'static String {
             "{} version {}, compiled from {}",
             env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_VERSION"),
-            include_str!(concat!(env!("OUT_DIR"), "/git-hash")).trim_right()
+            include_str!(concat!(env!("OUT_DIR"), "/git-hash")).trim_end()
         );
     }
     &CODE_DESCRIPTION
@@ -451,7 +451,8 @@ fn handle_bot_command(
                         "Leaving at request of {}.  Feel free to /invite me back.",
                         response_username.unwrap()
                     )),
-                )).unwrap();
+                ))
+                .unwrap();
             } else {
                 send_line(response_username, "'bye' only works in a channel");
             }
@@ -484,7 +485,8 @@ fn handle_bot_command(
                     "{}, rebooting at request of {}.",
                     &*code_description(),
                     response_username.unwrap()
-                )))).unwrap();
+                ))))
+                .unwrap();
 
                 // exit, and assume whatever started the bot will restart it
                 unimplemented!(); // This will exit.  Maybe do something cleaner later?
@@ -703,7 +705,7 @@ fn ci_starts_with(s: &str, prefix: &str) -> bool {
 /// present return the rest of the line.
 fn strip_ci_prefix(s: &str, prefix: &str) -> Option<String> {
     if ci_starts_with(s, prefix) {
-        Some(String::from(s[prefix.len()..].trim_left()))
+        Some(String::from(s[prefix.len()..].trim_start()))
     } else {
         None
     }
@@ -753,12 +755,16 @@ impl ChannelData {
         line: ChannelLine,
     ) {
         match line.is_action {
-            false => if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
-                self.start_topic(irc, event_loop.clone(), topic);
-            },
-            true => if line.source == "trackbot" && line.message == "is ending a teleconference." {
-                self.end_topic(irc, event_loop.clone());
-            },
+            false => {
+                if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
+                    self.start_topic(irc, event_loop.clone(), topic);
+                }
+            }
+            true => {
+                if line.source == "trackbot" && line.message == "is ending a teleconference." {
+                    self.end_topic(irc, event_loop.clone());
+                }
+            }
         };
         let respond_with = {
             let irc = irc.clone();
@@ -1088,66 +1094,85 @@ impl GithubCommentTask {
                         let repo = github.repo(github_url.owner, github_url.repo);
                         let num = github_url.number;
                         let (issue, pulls, pull);
-                        let (comments, labels) = match github_url.which {
+                        let (comments, labels, labels_future) = match github_url.which {
                             IssuesOrPull::Issues => {
                                 issue = repo.issue(num);
-                                (issue.comments(), issue.labels())
+                                (
+                                    issue.comments(),
+                                    issue.labels(),
+                                    Either::A(issue.get().map(|i| i.labels)),
+                                )
                             }
                             IssuesOrPull::Pull => {
                                 pulls = repo.pulls();
                                 pull = pulls.get(num);
-                                (pull.comments(), pull.labels())
+                                (
+                                    pull.comments(),
+                                    pull.labels(),
+                                    Either::B(pull.get().map(|p| p.labels)),
+                                )
                             }
                         };
 
-                        let commentopts = &CommentOptions { body: comment_text };
-                        let comment_task = comments.create(commentopts).then({
+                        self.event_loop.spawn(labels_future.then({
                             let github_url = github_url.url.clone();
-                            move |result| {
-                                ok::<String, ()>(match result {
-                                    Ok(_) => format!("Successfully commented on {}", github_url),
-                                    Err(err) => format!(
-                                        /* FIXME: Remove newlines *and backtrace* from err. */ "UNABLE TO COMMENT on {} due to error: {:?}",
-                                        github_url, err
-                                    ),
-                                })
+                            let remove_from_agenda = self.data.remove_from_agenda;
+                            move |labels_result| {
+                            match labels_result {
+                                Err(err) => Either::A(Ok(format!("UNABLE TO RETRIEVE LABELS ON {} due to error: {:?}", github_url, err)).into_future()),
+                                Ok(labels_vec) => {
+
+                                    let commentopts = &CommentOptions { body: comment_text };
+                                    let comment_task = comments.create(commentopts).then({
+                                        let github_url = github_url.clone();
+                                        move |result| {
+                                            ok::<String, ()>(match result {
+                                                Ok(_) => format!("Successfully commented on {}", github_url),
+                                                Err(err) => format!(
+                                                    /* FIXME: Remove newlines *and backtrace* from err. */ "UNABLE TO COMMENT on {} due to error: {:?}",
+                                                    github_url, err
+                                                ),
+                                            })
+                                        }
+                                    });
+
+                                    let mut label_tasks = Vec::new();
+                                    if remove_from_agenda {
+                                        // We had resolutions, so remove the "Agenda+" and
+                                        // "Agenda+ F2F" tags, if present.
+                                        for label in ["Agenda+", "Agenda+ F2F"].into_iter() {
+                                            // Test for presence of the label first, so that we can
+                                            // report errors when removing it.
+                                            if labels_vec.iter().any(|ref l| l.name == *label) {
+                                                let success_str = format!(" and removed the \"{}\" label", label);
+                                                label_tasks.push(labels.remove(label).then({
+                                                    let github_url = github_url.clone();
+                                                    move |result| {
+                                                        ok(match result {
+                                                            Ok(_) => success_str,
+                                                            Err(err) => format!(
+                                                                /* FIXME: Remove newlines *and backtrace* from err. */ " UNABLE TO REMOVE LABEL {} on {} due to error: {:?}",
+                                                                label, github_url, err
+                                                            ),
+                                                        })
+                                                    }
+                                                }));
+                                            }
+                                        }
+                                    }
+
+                                    Either::B(comment_task
+                                        .join(futures::future::join_all(label_tasks))
+                                        .map(|(comment_msg, label_msg_vec)| {
+                                            iter::once(&comment_msg)
+                                                .chain(label_msg_vec.iter())
+                                                .flat_map(|s| s.chars())
+                                                .collect::<String>()
+                                        }))
+                                }
                             }
-                        });
-
-                        let mut label_tasks = Vec::new();
-                        if self.data.remove_from_agenda {
-                            // We had resolutions, so remove the "Agenda+" and
-                            // "Agenda+ F2F" tags, if present.
-
-                            // Explicitly discard any errors.  That's because
-                            // this might give an error if the label isn't
-                            // present.
-                            // FIXME:  But it might also give a (different)
-                            // error if we don't have write access to the
-                            // repository, so we really ought to distinguish,
-                            // and report the latter.
-                            for label in ["Agenda+", "Agenda+ F2F"].into_iter() {
-                                let success_str = format!(" and removed the \"{}\" label", label);
-                                label_tasks.push(labels.remove(label).then(|result| {
-                                    ok(match result {
-                                        Ok(_) => success_str,
-                                        Err(_) => String::from(""),
-                                    })
-                                }));
-                            }
-                        }
-
-                        self.event_loop.spawn(
-                            comment_task
-                                .join(futures::future::join_all(label_tasks))
-                                .map(|(comment_msg, label_msg_vec)| {
-                                    iter::once(&comment_msg)
-                                        .chain(label_msg_vec.iter())
-                                        .flat_map(|s| s.chars())
-                                        .collect::<String>()
-                                })
-                                .map(move |s| send_response(s)),
-                        );
+                        }})
+                        .map(move |s| send_response(s)));
                     }
                     None => {
                         // Mock the github comments by sending them over IRC

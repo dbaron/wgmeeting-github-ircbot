@@ -87,10 +87,11 @@ fn test_one_chat(path: &Path) -> bool {
             .read_to_end(&mut file_bytes)
             .unwrap();
         file_bytes
-    }.split(|byte| *byte == '\n' as u8)
-        .map(|arr| arr.to_vec())
-        .rev()
-        .collect::<Vec<Vec<u8>>>();
+    }
+    .split(|byte| *byte == '\n' as u8)
+    .map(|arr| arr.to_vec())
+    .rev()
+    .collect::<Vec<Vec<u8>>>();
 
     let actual_lines_cell = Rc::new(RefCell::new(Vec::<u8>::new()));
     let expected_lines_cell = Rc::new(RefCell::new(
@@ -288,8 +289,9 @@ fn test_one_chat(path: &Path) -> bool {
         "{}:{}",
         IRC_CONFIG.server.as_ref().unwrap(),
         IRC_CONFIG.port.as_ref().unwrap()
-    )).parse()
-        .unwrap();
+    ))
+    .parse()
+    .unwrap();
     let irc_server_tcp = TcpListener::bind(&irc_server_addr, &handle).unwrap();
     let irc_server_stream = irc_server_tcp
         .incoming()
@@ -414,12 +416,13 @@ fn test_one_chat(path: &Path) -> bool {
                     );
                     !is_finished_cell.get()
                 }
-            }).for_each(move |message| {
+            })
+            .for_each(move |message| {
                 debug!("got IRC message");
                 process_irc_message(&irc_client, irc_state, &BOT_CONFIG, message);
                 Ok(())
             })
-                .join(irc_outgoing_future)
+            .join(irc_outgoing_future)
         });
 
     debug!("starting core.run");
