@@ -60,6 +60,12 @@ github_repos_allowed = [
     "w3c/imsc-tests",
     "w3c/imsc-vnext-reqs",
     "w3c/png-hdr-pq",
+    "w3c/tt-module-css",
+    "w3c/tt-module-karaoke",
+    "w3c/tt-module-live",
+    "w3c/tt-module-registry",
+    "w3c/tt-module-ruby-ext-1",
+    "w3c/tt-module-vr",
     "w3c/tt-profile-registry",
     "w3c/tt-reqs",
     "w3c/ttml-webvtt-mapping",
@@ -67,8 +73,13 @@ github_repos_allowed = [
     "w3c/ttml1-tests",
     "w3c/ttml2",
     "w3c/ttml2-tests",
+    "w3c/ttml3",
+    "w3c/ttml3-tests",
     "w3c/ttwg",
     "w3c/webvtt",
+    "w3c/IMSC-1.0.1_Text_TestContent",
+    "w3c/IMSC-1.1_Image_TestContent",
+    "w3c/IMSC-1.1_Text_TestContent",
 ]
 
 [channels."#pwg"]
