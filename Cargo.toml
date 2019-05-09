@@ -1,6 +1,6 @@
 [package]
 name = "wgmeeting_github_ircbot"
-version = "0.3.7"
+version = "0.3.8"
 authors = ["L. David Baron <dbaron@dbaron.org>"]
 build = "build.rs"
 
