@@ -86,6 +86,10 @@ where
     panic!("{:?}", err);
 }
 
+fn hubcaps_error_to_string(err: &hubcaps::errors::Error) -> String {
+    format!("{} - {:?}", err.description(), err.kind())
+}
+
 /// Run an iteration of the main loop of the bot, given an IRC server
 /// (with a real or mock / connection).
 pub fn process_irc_message(
@@ -823,8 +827,8 @@ impl ChannelData {
                                     IssuesOrPull::Pull => Either::B(
                                         repo.pulls().get(num).get().map(|pull| pull.title),
                                     ),
-                                }.or_else(|_err| {
-                                    Ok(String::from("COULDN'T GET TITLE")).into_future()
+                                }.or_else(|err| {
+                                    Ok(format!("COULDN'T GET TITLE due to error {}", hubcaps_error_to_string(&err))).into_future()
                                 })
                             }),
                         }.map({
@@ -1119,7 +1123,7 @@ impl GithubCommentTask {
                             let remove_from_agenda = self.data.remove_from_agenda;
                             move |labels_result| {
                             match labels_result {
-                                Err(err) => Either::A(Ok(format!("UNABLE TO RETRIEVE LABELS ON {} due to error: {:?}", github_url, err)).into_future()),
+                                Err(err) => Either::A(Ok(format!("UNABLE TO RETRIEVE LABELS ON {} due to error: {}", github_url, hubcaps_error_to_string(&err))).into_future()),
                                 Ok(labels_vec) => {
 
                                     let commentopts = &CommentOptions { body: comment_text };
@@ -1129,8 +1133,8 @@ impl GithubCommentTask {
                                             ok::<String, ()>(match result {
                                                 Ok(_) => format!("Successfully commented on {}", github_url),
                                                 Err(err) => format!(
-                                                    /* FIXME: Remove newlines *and backtrace* from err. */ "UNABLE TO COMMENT on {} due to error: {:?}",
-                                                    github_url, err
+                                                    "UNABLE TO COMMENT on {} due to error: {}",
+                                                    github_url, hubcaps_error_to_string(&err)
                                                 ),
                                             })
                                         }
@@ -1151,8 +1155,8 @@ impl GithubCommentTask {
                                                         ok(match result {
                                                             Ok(_) => success_str,
                                                             Err(err) => format!(
-                                                                /* FIXME: Remove newlines *and backtrace* from err. */ " UNABLE TO REMOVE LABEL {} on {} due to error: {:?}",
-                                                                label, github_url, err
+                                                                " UNABLE TO REMOVE LABEL {} on {} due to error: {}",
+                                                                label, github_url, hubcaps_error_to_string(&err)
                                                             ),
                                                         })
                                                     }
