@@ -205,7 +205,7 @@ pub fn process_irc_message(
                         }
 
                         if {
-                            let mut this_channel_data = this_channel_data_cell.borrow();
+                            let this_channel_data = this_channel_data_cell.borrow();
                             this_channel_data.current_topic.is_some()
                                 && !this_channel_data.have_activity_timeout
                         } {
