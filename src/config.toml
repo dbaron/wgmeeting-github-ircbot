@@ -144,3 +144,9 @@ group = "Revising W3C Process CG"
 github_repos_allowed = [
     "w3c/w3process",
 ]
+
+[channels."#eo"]
+group = "Education and Outreach (EO) Working Group"
+github_repos_allowed = [
+    "w3c/wai-authoring-tools",
+]
