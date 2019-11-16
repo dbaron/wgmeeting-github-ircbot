@@ -658,7 +658,7 @@ impl fmt::Display for TopicData {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // Use `...` around the topic and resolutions, and ```-escaping around
         // the IRC log to avoid most concern about escaping.
-        try!(write!(
+        write!(
             f,
             "The {} just discussed {}",
             self.group,
@@ -667,29 +667,25 @@ impl fmt::Display for TopicData {
             } else {
                 escape_as_code_span(&*self.topic)
             }
-        ));
+        )?;
         if self.resolutions.len() == 0 {
-            try!(write!(f, ".\n"));
+            write!(f, ".\n")?;
         } else {
-            try!(write!(f, ", and agreed to the following:\n\n"));
+            write!(f, ", and agreed to the following:\n\n")?;
             for resolution in &self.resolutions {
-                try!(write!(f, "* {}\n", escape_as_code_span(&*resolution)));
+                write!(f, "* {}\n", escape_as_code_span(&*resolution))?;
             }
         }
 
-        try!(write!(
+        write!(
             f,
             "\n<details><summary>The full IRC log of that \
              discussion</summary>\n"
-        ));
+        )?;
         for line in &self.lines {
-            try!(write!(
-                f,
-                "{}<br>\n",
-                escape_for_html_block(&*format!("{}", line))
-            ));
+            write!(f, "{}<br>\n", escape_for_html_block(&*format!("{}", line)))?;
         }
-        try!(write!(f, "</details>\n"));
+        write!(f, "</details>\n")?;
         Ok(())
     }
 }

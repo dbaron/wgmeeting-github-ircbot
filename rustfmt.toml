@@ -9,3 +9,4 @@ reorder_imports = true
 #reorder_imported_names = true # only available on nightly channel
 
 #spaces_around_ranges = true # only available on nightly channel
+use_try_shorthand = true
