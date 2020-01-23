@@ -24,6 +24,7 @@ github_repos_allowed = [
     "w3c/svgwg",
     "web-platform-tests/wpt",
     "WICG/animation-worklet",
+    "WICG/construct-stylesheets",
     "WICG/scroll-animations",
 ]
 
@@ -36,6 +37,7 @@ github_repos_allowed = [
     "w3c/svgwg",
     "web-platform-tests/wpt",
     "WICG/animation-worklet",
+    "WICG/construct-stylesheets",
     "WICG/scroll-animations",
 ]
 
@@ -48,6 +50,7 @@ github_repos_allowed = [
     "w3c/svgwg",
     "web-platform-tests/wpt",
     "WICG/animation-worklet",
+    "WICG/construct-stylesheets",
     "WICG/scroll-animations",
 ]
 
