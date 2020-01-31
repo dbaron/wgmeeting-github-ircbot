@@ -918,7 +918,7 @@ fn extract_github_url(
     }
     if let Some(ref maybe_url) = strip_one_ci_prefix(
         &message,
-        ["github:", "github topic:", "github issue:"].into_iter(),
+        ["github:", "github topic:", "github issue:"].iter(),
     ) {
         if maybe_url.to_lowercase() == "none" {
             (Some(None), None)
@@ -1140,7 +1140,7 @@ impl GithubCommentTask {
                                     if remove_from_agenda {
                                         // We had resolutions, so remove the "Agenda+" and
                                         // "Agenda+ F2F" tags, if present.
-                                        for label in ["Agenda+", "Agenda+ F2F"].into_iter() {
+                                        for label in ["Agenda+", "Agenda+ F2F"].iter() {
                                             // Test for presence of the label first, so that we can
                                             // report errors when removing it.
                                             if labels_vec.iter().any(|ref l| l.name == *label) {
@@ -1241,19 +1241,19 @@ mod tests {
     #[test]
     fn test_strip_one_ci_prefix() {
         assert_eq!(
-            strip_one_ci_prefix("GitHub:url goes here", ["issue:", "github:"].into_iter()),
+            strip_one_ci_prefix("GitHub:url goes here", ["issue:", "github:"].iter()),
             Some(String::from("url goes here"))
         );
         assert_eq!(
-            strip_one_ci_prefix("GITHUB: url goes here", ["issue:", "github:"].into_iter()),
+            strip_one_ci_prefix("GITHUB: url goes here", ["issue:", "github:"].iter()),
             Some(String::from("url goes here"))
         );
         assert_eq!(
-            strip_one_ci_prefix("issue: url goes here", ["issue:", "github:"].into_iter()),
+            strip_one_ci_prefix("issue: url goes here", ["issue:", "github:"].iter()),
             Some(String::from("url goes here"))
         );
         assert_eq!(
-            strip_one_ci_prefix("topic: url goes here", ["issue:", "github:"].into_iter()),
+            strip_one_ci_prefix("topic: url goes here", ["issue:", "github:"].iter()),
             None
         );
     }
