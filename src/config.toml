@@ -153,3 +153,9 @@ group = "Education and Outreach (EO) Working Group"
 github_repos_allowed = [
     "w3c/wai-authoring-tools",
 ]
+
+[channels."#ab"]
+group = "Advisory Board"
+github_repos_allowed = [
+    "w3c/ab-memberonly",
+]
