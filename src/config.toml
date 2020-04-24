@@ -152,6 +152,7 @@ github_repos_allowed = [
 group = "Education and Outreach (EO) Working Group"
 github_repos_allowed = [
     "w3c/wai-authoring-tools",
+    "w3c/wai-atag-report-tool",
 ]
 
 [channels."#ab"]
