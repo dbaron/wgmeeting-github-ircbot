@@ -11,9 +11,8 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate futures;
+extern crate futures01;
 extern crate hubcaps;
-extern crate hyper;
-extern crate hyper_tls;
 extern crate irc;
 #[macro_use]
 extern crate lazy_static;
@@ -22,12 +21,11 @@ extern crate log;
 extern crate regex;
 extern crate tokio_core;
 
-use futures::future::{ok, Either};
+use futures::future::{ok, Either, FutureExt};
 use futures::prelude::*;
+use futures01::Future;
 use hubcaps::comments::CommentOptions;
 use hubcaps::{Credentials, Github};
-use hyper::client::HttpConnector;
-use hyper_tls::HttpsConnector;
 use irc::client::ext::ClientExt;
 use irc::client::prelude::{Command, IrcClient};
 use irc::client::Client;
@@ -84,10 +82,6 @@ where
     T: Debug,
 {
     panic!("{:?}", err);
-}
-
-fn hubcaps_error_to_string(err: &hubcaps::errors::Error) -> String {
-    format!("{} - {:?}", err.description(), err.kind())
 }
 
 /// Run an iteration of the main loop of the bot, given an IRC server
@@ -810,24 +804,23 @@ impl ChannelData {
                         let github = github_connection(self.config, self.github_type);
                         let respond_title_future = match github {
                             // When mocking the github connection for tests, pretend it's "TITLE".
-                            // FIXME: When upgrading to futures 0.2, use left() and right() rather
-                            // than explicit Either::{A,B}().
-                            None => Either::A(Ok(String::from("TITLE")).into_future()),
-                            Some(github) => Either::B({
+                            // FIXME: Are there now better methods for this in futures 0.3?
+                            None => Either::Left(future::ok(String::from("TITLE"))),
+                            Some(github) => Either::Right({
                                 let repo = github.repo(new_url.owner, new_url.repo);
                                 let num = new_url.number;
                                 match new_url.which {
                                     IssuesOrPull::Issues => {
-                                        Either::A(repo.issue(num).get().map(|issue| issue.title))
+                                        Either::Left(repo.issue(num).get().map_ok(|issue| issue.title))
                                     }
-                                    IssuesOrPull::Pull => Either::B(
-                                        repo.pulls().get(num).get().map(|pull| pull.title),
+                                    IssuesOrPull::Pull => Either::Right(
+                                        repo.pulls().get(num).get().map_ok(|pull| pull.title),
                                     ),
                                 }.or_else(|err| {
-                                    Ok(format!("COULDN'T GET TITLE due to error {}", hubcaps_error_to_string(&err))).into_future()
+                                    future::ok(format!("COULDN'T GET TITLE due to error {:?}", err))
                                 })
                             }),
-                        }.map({
+                        }.map_ok({
                             let old_url_option = (*old_url_option).clone();
                             let new_url = new_url.url.clone();
                             move |title| {
@@ -837,7 +830,7 @@ impl ChannelData {
                                 }
                             }
                         });
-                        event_loop.spawn(respond_title_future);
+                        event_loop.spawn(respond_title_future.compat());
                     }
                 };
 
@@ -1031,15 +1024,15 @@ impl GithubURL {
 
 // Return Some(connection) when we're really connecting and None if we're
 // mocking the connection.
-fn github_connection(
-    config: &BotConfig,
-    github_type: GithubType,
-) -> Option<Github<HttpsConnector<HttpConnector>>> {
+fn github_connection(config: &BotConfig, github_type: GithubType) -> Option<Github> {
     match github_type {
-        GithubType::RealGithubConnection => Some(Github::new(
-            config.github_uastring.as_str(),
-            Some(Credentials::Token(config.github_access_token.clone())),
-        )),
+        GithubType::RealGithubConnection => Some(
+            Github::new(
+                config.github_uastring.as_str(),
+                Some(Credentials::Token(config.github_access_token.clone())),
+            )
+            .unwrap(),
+        ),
         GithubType::MockGithubConnection => None,
     }
 }
@@ -1049,8 +1042,7 @@ struct GithubCommentTask {
     irc: IrcClient,
     response_target: String,
     data: TopicData,
-    github: Option<Github<HttpsConnector<HttpConnector>>>, /* None means we're mocking the
-                                                            * connection */
+    github: Option<Github>, /* None means we're mocking the connection */
     event_loop: Handle,
 }
 
@@ -1100,7 +1092,7 @@ impl GithubCommentTask {
                                 (
                                     issue.comments(),
                                     issue.labels(),
-                                    Either::A(issue.get().map(|i| i.labels)),
+                                    Either::Left(issue.get().map_ok(|i| i.labels)),
                                 )
                             }
                             IssuesOrPull::Pull => {
@@ -1109,7 +1101,7 @@ impl GithubCommentTask {
                                 (
                                     pull.comments(),
                                     pull.labels(),
-                                    Either::B(pull.get().map(|p| p.labels)),
+                                    Either::Right(pull.get().map_ok(|p| p.labels)),
                                 )
                             }
                         };
@@ -1119,7 +1111,7 @@ impl GithubCommentTask {
                             let remove_from_agenda = self.data.remove_from_agenda;
                             move |labels_result| {
                             match labels_result {
-                                Err(err) => Either::A(Ok(format!("UNABLE TO RETRIEVE LABELS ON {} due to error: {}", github_url, hubcaps_error_to_string(&err))).into_future()),
+                                Err(err) => Either::Left(future::ok(format!("UNABLE TO RETRIEVE LABELS ON {} due to error: {:?}", github_url, err))),
                                 Ok(labels_vec) => {
 
                                     let commentopts = &CommentOptions { body: comment_text };
@@ -1129,8 +1121,8 @@ impl GithubCommentTask {
                                             ok::<String, ()>(match result {
                                                 Ok(_) => format!("Successfully commented on {}", github_url),
                                                 Err(err) => format!(
-                                                    "UNABLE TO COMMENT on {} due to error: {}",
-                                                    github_url, hubcaps_error_to_string(&err)
+                                                    "UNABLE TO COMMENT on {} due to error: {:?}",
+                                                    github_url, err
                                                 ),
                                             })
                                         }
@@ -1151,8 +1143,8 @@ impl GithubCommentTask {
                                                         ok(match result {
                                                             Ok(_) => success_str,
                                                             Err(err) => format!(
-                                                                " UNABLE TO REMOVE LABEL {} on {} due to error: {}",
-                                                                label, github_url, hubcaps_error_to_string(&err)
+                                                                " UNABLE TO REMOVE LABEL {} on {} due to error: {:?}",
+                                                                label, github_url, err
                                                             ),
                                                         })
                                                     }
@@ -1161,18 +1153,19 @@ impl GithubCommentTask {
                                         }
                                     }
 
-                                    Either::B(comment_task
-                                        .join(futures::future::join_all(label_tasks))
-                                        .map(|(comment_msg, label_msg_vec)| {
-                                            iter::once(&comment_msg)
-                                                .chain(label_msg_vec.iter())
-                                                .flat_map(|s| s.chars())
-                                                .collect::<String>()
-                                        }))
+                                    Either::Right(
+                                        futures::future::join(comment_task, futures::future::join_all(label_tasks))
+                                            .map(|(comment_msg, label_msg_vec)| {
+                                                Ok(iter::once(&comment_msg)
+                                                    .chain(label_msg_vec.iter())
+                                                    .flat_map(|s| s.as_ref().unwrap().chars())
+                                                    .collect::<String>())
+                                            })
+                                    )
                                 }
                             }
                         }})
-                        .map(move |s| send_response(s)));
+                        .map_ok(move |s| send_response(s)).compat());
                     }
                     None => {
                         // Mock the github comments by sending them over IRC

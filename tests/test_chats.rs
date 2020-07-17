@@ -8,6 +8,7 @@
 extern crate diff;
 extern crate env_logger;
 extern crate futures;
+extern crate futures01;
 extern crate irc;
 #[macro_use]
 extern crate lazy_static;
@@ -18,10 +19,13 @@ extern crate tokio_core;
 extern crate tokio_io;
 extern crate wgmeeting_github_ircbot;
 
-mod take_while_external_condition;
-
+use futures::compat::Future01CompatExt;
+use futures::compat::Stream01CompatExt;
 use futures::prelude::*;
-use irc::client::prelude::{Client, ClientExt, Config, Future, IrcClient, Stream};
+use futures::task::Poll;
+use futures01::sink::Sink;
+use futures01::Future;
+use irc::client::prelude::{Client, ClientExt, Config, IrcClient, Stream};
 use irc::client::PackedIrcClient;
 use std::cell::{Cell, RefCell};
 use std::fmt::Debug;
@@ -63,13 +67,6 @@ where
     T: Debug,
 {
     panic!("{:?}", err);
-}
-
-fn to_irc_error<T>(err: T) -> irc::error::IrcError
-where
-    irc::error::IrcError: From<T>,
-{
-    irc::error::IrcError::from(err)
 }
 
 fn test_one_chat(path: &Path) -> bool {
@@ -132,13 +129,13 @@ fn test_one_chat(path: &Path) -> bool {
     }));
 
     // A stream of the file data, but which will be slowed down so that it is
-    // Async::NotReady when we ought to be waiting for input from the IRC server
+    // Poll::Pending when we ought to be waiting for input from the IRC server
     // instead.
     let file_data_stream = futures::stream::poll_fn({
         let wait_lines_data_cell = wait_lines_data_cell.clone();
         let expected_lines_cell = expected_lines_cell.clone();
         let handle = handle.clone();
-        move || -> Poll<Option<Vec<u8>>, std::io::Error> {
+        move |_cx| -> Poll<Option<Vec<u8>>> {
             debug!("in poll_fn");
             if wait_lines_data_cell.borrow().should_wait() {
                 // FIXME: Is this timer really needed?
@@ -153,7 +150,7 @@ fn test_one_chat(path: &Path) -> bool {
                         }),
                 );
 
-                Ok(Async::NotReady)
+                Poll::Pending
             } else {
                 let line_option = chat_file_reversed_lines.pop();
                 if let Some(ref line) = line_option {
@@ -223,13 +220,14 @@ fn test_one_chat(path: &Path) -> bool {
                         }
                     }
                 }
-                Ok(Async::Ready(line_option))
+                Poll::Ready(line_option)
             }
         }
     });
 
     // Note that this leaves the initial '<' in the line.
-    let lines_to_write_stream = file_data_stream.filter(|line| line.first() == Some(&('<' as u8)));
+    let lines_to_write_stream =
+        file_data_stream.filter(|line| future::ready(line.first() == Some(&('<' as u8))));
 
     lazy_static! {
         static ref IRC_CONFIG: Config = Config {
@@ -299,31 +297,32 @@ fn test_one_chat(path: &Path) -> bool {
         .into_future()
         .map_err(|(err, _stream)| err)
         .map(|(conn_option, _stream)| conn_option.unwrap())
-        .and_then({
+        .compat()
+        .then({
             let handle = handle.clone();
             let actual_lines_cell = actual_lines_cell.clone();
             let is_finished_cell = is_finished_cell.clone();
-            move |(tcp_stream, _socket_addr)| {
+            move |res| {
+                let (tcp_stream, _socket_addr) = res.unwrap();
                 tcp_stream.set_nodelay(true).unwrap();
                 debug!("IRC server got incoming connection: nodelay={} recv_buffer_size={} send_buffer_size={}", tcp_stream.nodelay().unwrap(), tcp_stream.recv_buffer_size().unwrap(), tcp_stream.send_buffer_size().unwrap());
                 let (writer, reader) = tcp_stream.framed(LinesCodec::new()).split();
                 let writer_cell = Rc::new(RefCell::new(writer));
-                let logged_lines_future = take_while_external_condition::new(reader, {
+                let logged_lines_future = reader.compat().take_until({
                     let is_finished_cell = is_finished_cell.clone();
-                    move || {
-                        debug!(
-                            "in take_while callback for logged_lines: {}",
-                            if is_finished_cell.get() {
-                                "terminating"
-                            } else {
-                                ""
-                            }
-                        );
-                        !is_finished_cell.get()
-                    }
+                    future::poll_fn(move |_cx| {
+                        if is_finished_cell.get() {
+                            debug!("in take_until callback for messages stream: terminating");
+                            Poll::Ready(())
+                        } else {
+                            debug!("in take_until callback for messages stream: continuing");
+                            Poll::Pending
+                        }
+                    })
                 }).for_each({
                     let actual_lines_cell = actual_lines_cell.clone();
-                    move |line| {
+                    move |line_result| {
+                        let line = line_result.unwrap();
                         debug!("IRC server read line: {}", line);
                         {
                             let mut wait_lines_data = wait_lines_data_cell.borrow_mut();
@@ -341,11 +340,11 @@ fn test_one_chat(path: &Path) -> bool {
                             );
                             actual_lines.append(&mut "\r\n".bytes().collect());
                         }
-                        Ok(())
+                        future::ready(())
                     }
                 });
                 let send_lines_future = lines_to_write_stream
-                    .and_then({
+                    .then({
                         let actual_lines_cell = actual_lines_cell.clone();
                         let writer_cell = writer_cell.clone();
                         move |line| {
@@ -364,34 +363,37 @@ fn test_one_chat(path: &Path) -> bool {
                                 actual_lines.extend_from_slice(&line);
                                 actual_lines.append(&mut "\r\n".bytes().collect());
                                 if writer.start_send(String::from(line_str)).unwrap()
-                                    != futures::AsyncSink::Ready
+                                    != futures01::AsyncSink::Ready
                                 {
                                     panic!("Sink full");
                                 }
                             }
-                            futures::future::poll_fn({
+                            futures01::future::poll_fn({
                                 let writer_cell = writer_cell.clone();
                                 move || {
                                     let mut writer = writer_cell.borrow_mut();
                                     writer.poll_complete()
                                 }
-                            })
+                            }).compat()
                         }
                     })
-                    .for_each(|()| Ok(()))
-                    .and_then(move |()| Timeout::new(SERVER_SHUTDOWN_DURATION, &handle))
-                    .and_then(move |_timeout| {
+                    .for_each(|_item| future::ready(()))
+                    .then(move |()| Timeout::new(SERVER_SHUTDOWN_DURATION, &handle).unwrap().compat())
+                    .then(move |_timeout| {
                         debug!("SHUTTING DOWN THE SERVER");
                         is_finished_cell.set(true);
                         // tcp_stream.shutdown(std::net::Shutdown::Both)
                         // FIXME: This isn't enough.
-                        let mut writer = writer_cell.borrow_mut();
-                        writer.close()
+                        futures01::future::poll_fn(move || {
+                            let mut writer = writer_cell.borrow_mut();
+                            writer.close()
+                        }).compat()
                     });
-                logged_lines_future.join(send_lines_future)
+                future::join(logged_lines_future, send_lines_future)
             }
         })
-        .map_err(to_irc_error);
+        .map(|res| Ok(res))
+        .compat();
 
     let irc_client_future = IrcClient::new_future(handle.clone(), &IRC_CONFIG).expect(
         "Couldn't initialize server \
@@ -403,26 +405,34 @@ fn test_one_chat(path: &Path) -> bool {
             debug!("have PackedIrcClient, sending identify");
             irc_client.identify().unwrap();
             debug!("sent identify");
-            take_while_external_condition::new(irc_client.stream(), {
-                let is_finished_cell = is_finished_cell.clone();
-                move || {
-                    debug!(
-                        "in take_while callback for messages stream: {}",
+            let irc_incoming_future = irc_client
+                .stream()
+                .compat()
+                .take_until({
+                    let is_finished_cell = is_finished_cell.clone();
+                    future::poll_fn(move |_cx| {
                         if is_finished_cell.get() {
-                            "terminating"
+                            debug!("in take_until callback for messages stream: terminating");
+                            Poll::Ready(())
                         } else {
-                            ""
+                            debug!("in take_until callback for messages stream: continuing");
+                            Poll::Pending
                         }
+                    })
+                })
+                .for_each(move |message_result| {
+                    debug!("got IRC message");
+                    process_irc_message(
+                        &irc_client,
+                        irc_state,
+                        &BOT_CONFIG,
+                        message_result.unwrap(),
                     );
-                    !is_finished_cell.get()
-                }
-            })
-            .for_each(move |message| {
-                debug!("got IRC message");
-                process_irc_message(&irc_client, irc_state, &BOT_CONFIG, message);
-                Ok(())
-            })
-            .join(irc_outgoing_future)
+                    future::ready(())
+                })
+                .map(|res| Ok(res))
+                .compat();
+            irc_incoming_future.join(irc_outgoing_future)
         });
 
     debug!("starting core.run");
