@@ -5,22 +5,12 @@
 //! input beginning with <, expected IRC output beginning with >, and expected
 //! github output beginning with !.
 
-extern crate diff;
-extern crate env_logger;
-extern crate futures;
-extern crate irc;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate pin_utils;
-extern crate tokio;
-extern crate wgmeeting_github_ircbot;
-
 use futures::prelude::*;
 use futures::task::Poll;
 use irc::client::prelude::{Client as IrcClient, Config as IrcConfig};
+use lazy_static::lazy_static;
+use log::{debug, info};
+use pin_utils::pin_mut;
 use std::cell::{Cell, RefCell};
 use std::fs::File;
 use std::io::Read;

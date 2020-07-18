@@ -5,27 +5,15 @@
 //! combined with "Github:", "Github topic:", or "Github issue:" lines that
 //! give the github issue to comment in.
 
-// We need this for derive(Deserialize).
-#[allow(unused_extern_crates)]
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate futures;
-extern crate hubcaps;
-extern crate irc;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate log;
-extern crate regex;
-extern crate tokio;
-
 use futures::future::{ok, Either, FutureExt};
 use futures::prelude::*;
 use hubcaps::comments::CommentOptions;
 use hubcaps::{Credentials, Github};
 use irc::client::prelude::{Client as IrcClient, Command, Message};
+use lazy_static::lazy_static;
+use log::{info, warn};
 use regex::Regex;
+use serde::Deserialize;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;

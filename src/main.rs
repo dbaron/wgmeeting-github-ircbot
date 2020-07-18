@@ -5,22 +5,10 @@
 //! combined with "Github topic:" or "Github issue:" lines that give the
 //! github issue to comment in.
 
-extern crate env_logger;
-extern crate failure;
-extern crate futures;
-extern crate irc;
-// We need this for derive(Deserialize).
-#[allow(unused_extern_crates)]
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate tokio;
-extern crate toml;
-extern crate wgmeeting_github_ircbot;
-
 use futures::prelude::*;
 use futures::stream::StreamExt;
 use irc::client::prelude::{Client as IrcClient, Config as IrcConfig};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
