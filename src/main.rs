@@ -53,8 +53,7 @@ fn main() -> Result<(), failure::Error> {
     // FIXME: Add a way to ask the bot to reboot itself?
 
     let mut rt = Runtime::new()?;
-    let handle = rt.handle();
-    let mut irc_state = IRCState::new(GithubType::RealGithubConnection, &handle);
+    let mut irc_state = IRCState::new(GithubType::RealGithubConnection);
 
     // FIXME: Convert this to Rust 2018 in the style of https://docs.rs/crate/irc/0.14.0 ,
     // using async fn and #[tokio::main].

@@ -252,7 +252,7 @@ fn test_one_chat(path: &Path) -> bool {
         };
     }
 
-    let mut irc_state_ = IRCState::new(GithubType::MockGithubConnection, &handle);
+    let mut irc_state_ = IRCState::new(GithubType::MockGithubConnection);
     let irc_state = &mut irc_state_;
 
     let irc_server_addr: String = (*format!(
