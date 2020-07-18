@@ -6,13 +6,11 @@
 //! github issue to comment in.
 
 use futures::prelude::*;
-use futures::stream::StreamExt;
 use irc::client::prelude::{Client as IrcClient, Config as IrcConfig};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use tokio::runtime::Runtime;
 use wgmeeting_github_ircbot::*;
 
 fn read_config() -> (IrcConfig, BotConfig) {
@@ -45,36 +43,25 @@ fn read_config() -> (IrcConfig, BotConfig) {
     (config.irc, config.bot)
 }
 
-fn main() -> Result<(), failure::Error> {
+#[tokio::main]
+async fn main() -> Result<(), failure::Error> {
     env_logger::init();
     let (irc_config, bot_config) = read_config();
     let bot_config: &'static _ = Box::leak(Box::new(bot_config));
 
     // FIXME: Add a way to ask the bot to reboot itself?
 
-    let mut rt = Runtime::new()?;
     let mut irc_state = IRCState::new(GithubType::RealGithubConnection);
 
-    // FIXME: Convert this to Rust 2018 in the style of https://docs.rs/crate/irc/0.14.0 ,
-    // using async fn and #[tokio::main].
-
     let irc_client: &'static mut _ =
-        Box::leak(Box::new(rt.block_on(IrcClient::from_config(irc_config))?));
+        Box::leak(Box::new(IrcClient::from_config(irc_config).await?));
     irc_client.identify()?;
 
-    let irc_stream = irc_client.stream()?;
+    let mut irc_stream = irc_client.stream()?;
 
-    // Work around https://github.com/rust-lang/rust/issues/42574 ?
-    let irc_client_: &'static _ = irc_client;
-
-    let irc_future = irc_stream.for_each(move |message_result| {
-        if let Ok(message) = message_result {
-            process_irc_message(irc_client_, &mut irc_state, bot_config, message);
-        }
-        future::ready(())
-    });
-
-    let _ = rt.block_on(irc_future);
+    while let Some(message) = irc_stream.next().await.transpose()? {
+        process_irc_message(irc_client, &mut irc_state, bot_config, message);
+    }
 
     Ok(())
 }
