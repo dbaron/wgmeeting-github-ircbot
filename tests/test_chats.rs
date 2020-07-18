@@ -47,7 +47,6 @@ fn test_one_chat(path: &Path) -> bool {
     info!("Testing {:?}", path);
 
     let mut rt = Runtime::new().unwrap();
-    let handle = rt.handle();
 
     // All of the lines in the file, as a vec (lines, backwards) of vecs (bytes,
     // forwards).
@@ -108,13 +107,12 @@ fn test_one_chat(path: &Path) -> bool {
     let file_data_stream = stream::poll_fn({
         let wait_lines_data_cell = wait_lines_data_cell.clone();
         let expected_lines_cell = expected_lines_cell.clone();
-        let handle = handle.clone();
         move |_cx| -> Poll<Option<Vec<u8>>> {
             debug!("in poll_fn");
             if wait_lines_data_cell.borrow().should_wait() {
                 // FIXME: Is this timer really needed?
                 debug!("starting should_wait timer");
-                let _ = handle.spawn(tokio::time::delay_for(Duration::from_millis(1)).then(|()| {
+                let _ = tokio::spawn(tokio::time::delay_for(Duration::from_millis(1)).then(|()| {
                     debug!("should_wait timer finished");
                     future::ok::<(), ()>(())
                 }));
