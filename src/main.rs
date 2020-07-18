@@ -6,22 +6,25 @@
 //! github issue to comment in.
 
 extern crate env_logger;
+extern crate failure;
+extern crate futures;
 extern crate irc;
 // We need this for derive(Deserialize).
 #[allow(unused_extern_crates)]
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate tokio_core;
+extern crate tokio;
 extern crate toml;
 extern crate wgmeeting_github_ircbot;
 
-use irc::client::prelude::{Client, ClientExt, Config as IrcConfig, Future, IrcClient, Stream};
-use irc::client::PackedIrcClient;
+use futures::prelude::*;
+use futures::stream::StreamExt;
+use irc::client::prelude::{Client as IrcClient, Config as IrcConfig};
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use tokio_core::reactor::Core;
+use tokio::runtime::Runtime;
 use wgmeeting_github_ircbot::*;
 
 fn read_config() -> (IrcConfig, BotConfig) {
@@ -49,34 +52,42 @@ fn read_config() -> (IrcConfig, BotConfig) {
     let mut config: Config = toml::from_slice(&file).expect("couldn't parse configuration file");
     config.bot.github_access_token =
         fs::read_to_string(token_file).expect("couldn't read github access token file");
-    config.irc.channels = Some(config.channels.keys().cloned().collect());
+    config.irc.channels = config.channels.keys().cloned().collect();
     config.bot.channels = config.channels;
     (config.irc, config.bot)
 }
 
-fn main() {
+fn main() -> Result<(), failure::Error> {
     env_logger::init();
-    let (irc_config, bot_config): &'static (_, _) = Box::leak(Box::new(read_config()));
+    let (irc_config, bot_config) = read_config();
+    let bot_config: &'static _ = Box::leak(Box::new(bot_config));
 
     // FIXME: Add a way to ask the bot to reboot itself?
 
-    let mut core = Core::new().unwrap();
-    let handle = core.handle();
+    let mut rt = Runtime::new()?;
+    let handle = rt.handle();
     let mut irc_state = IRCState::new(GithubType::RealGithubConnection, &handle);
 
-    let irc_client_future = IrcClient::new_future(handle, irc_config).expect(
-        "Couldn't initialize server \
-         with given configuration file",
-    );
+    // FIXME: Convert this to Rust 2018 in the style of https://docs.rs/crate/irc/0.14.0 ,
+    // using async fn and #[tokio::main].
 
-    let PackedIrcClient(irc, irc_outgoing_future) = core.run(irc_client_future).unwrap();
+    let irc_client: &'static mut _ =
+        Box::leak(Box::new(rt.block_on(IrcClient::from_config(irc_config))?));
+    irc_client.identify()?;
 
-    irc.identify().unwrap();
+    let irc_stream = irc_client.stream()?;
 
-    let ircstream = irc.stream().for_each(|message| {
-        process_irc_message(&irc, &mut irc_state, bot_config, message);
-        Ok(())
+    // Work around https://github.com/rust-lang/rust/issues/42574 ?
+    let irc_client_: &'static _ = irc_client;
+
+    let irc_future = irc_stream.for_each(move |message_result| {
+        if let Ok(message) = message_result {
+            process_irc_message(irc_client_, &mut irc_state, bot_config, message);
+        }
+        future::ready(())
     });
 
-    let _ = core.run(ircstream.join(irc_outgoing_future)).unwrap();
+    let _ = rt.block_on(irc_future);
+
+    Ok(())
 }

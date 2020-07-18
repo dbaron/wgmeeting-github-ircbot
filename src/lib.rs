@@ -11,7 +11,6 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate futures;
-extern crate futures01;
 extern crate hubcaps;
 extern crate irc;
 #[macro_use]
@@ -19,27 +18,21 @@ extern crate lazy_static;
 #[macro_use]
 extern crate log;
 extern crate regex;
-extern crate tokio_core;
+extern crate tokio;
 
 use futures::future::{ok, Either, FutureExt};
 use futures::prelude::*;
-use futures01::Future;
 use hubcaps::comments::CommentOptions;
 use hubcaps::{Credentials, Github};
-use irc::client::ext::ClientExt;
-use irc::client::prelude::{Command, IrcClient};
-use irc::client::Client;
-use irc::proto::message::Message;
+use irc::client::prelude::{Client as IrcClient, Command, Message};
 use regex::Regex;
-use std::cell::RefCell;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
-use std::fmt::Debug;
 use std::iter;
-use std::rc::Rc;
-use std::time::{Duration, Instant};
-use tokio_core::reactor::{Handle, Timeout};
+use std::sync::{Arc, RwLock};
+use tokio::runtime::Handle;
+use tokio::time::{Duration, Instant};
 
 /// Configuration for a single IRC channel.
 #[derive(Default, Deserialize)]
@@ -65,6 +58,8 @@ pub struct BotConfig {
     /// GitHub access token.
     #[serde(skip)]
     pub github_access_token: String,
+    /// Bot owner IRC nicks, duplicate of what's in the IRC configuration.
+    pub owners: Vec<String>,
 }
 
 #[derive(Copy, Clone)]
@@ -77,17 +72,10 @@ pub enum GithubType {
     MockGithubConnection,
 }
 
-fn panic_on_err<T>(err: T) -> ()
-where
-    T: Debug,
-{
-    panic!("{:?}", err);
-}
-
 /// Run an iteration of the main loop of the bot, given an IRC server
 /// (with a real or mock / connection).
 pub fn process_irc_message(
-    irc: &IrcClient,
+    irc: &'static IrcClient,
     irc_state: &mut IRCState,
     config: &'static BotConfig,
     message: Message,
@@ -147,7 +135,7 @@ pub fn process_irc_message(
                                     // FIXME: refactor away clone
                                     let event_loop = irc_state.event_loop.clone();
                                     let mut this_channel_data =
-                                        irc_state.channel_data(target, config).borrow_mut();
+                                        irc_state.channel_data(target, config).write().unwrap();
                                     this_channel_data.add_line(&irc, target, event_loop, line);
                                 }
                             }
@@ -157,49 +145,53 @@ pub fn process_irc_message(
                         let event_loop = irc_state.event_loop.clone();
 
                         let this_channel_data_cell = irc_state.channel_data(target, config);
-                        this_channel_data_cell.borrow_mut().last_activity = Instant::now();
+                        this_channel_data_cell.write().unwrap().last_activity = Instant::now();
                         fn create_timeout(
-                            irc: &IrcClient,
-                            this_channel_data_cell: Rc<RefCell<ChannelData>>,
+                            irc: &'static IrcClient,
+                            /* FIXME: Why do I need (as of tokio 0.2) to use Arc and RwLock when I'm using the basic scheduler? */
+                            this_channel_data_cell: Arc<RwLock<ChannelData>>,
                             event_loop: Handle,
                         ) -> () {
-                            let mut this_channel_data = this_channel_data_cell.borrow_mut();
-                            let deadline = this_channel_data.last_activity
-                                + this_channel_data.activity_timeout_duration;
-                            let timeout = Timeout::new_at(deadline, &event_loop)
-                                .unwrap()
-                                .map({
-                                    let event_loop = event_loop.clone();
-                                    let irc = irc.clone();
-                                    let this_channel_data_cell = this_channel_data_cell.clone();
-                                    move |_timeout| {
+                            let deadline = {
+                                let mut this_channel_data = this_channel_data_cell.write().unwrap();
+
+                                // Set |have_activity_timeout| here, separate from the
+                                // computation of deadline.
+                                this_channel_data.have_activity_timeout = true;
+
+                                this_channel_data.last_activity
+                                    + this_channel_data.activity_timeout_duration
+                            };
+                            let timeout = tokio::time::delay_until(deadline).map({
+                                let event_loop = event_loop.clone();
+                                let irc = irc.clone();
+                                let this_channel_data_cell = this_channel_data_cell.clone();
+                                move |_timeout| {
+                                    {
+                                        let mut this_channel_data =
+                                            this_channel_data_cell.write().unwrap();
+                                        this_channel_data.have_activity_timeout = false;
+                                        if this_channel_data.current_topic.is_none() {
+                                            // No topic to time out.
+                                            return;
+                                        } else if Instant::now()
+                                            >= this_channel_data.last_activity
+                                                + this_channel_data.activity_timeout_duration
                                         {
-                                            let mut this_channel_data =
-                                                this_channel_data_cell.borrow_mut();
-                                            this_channel_data.have_activity_timeout = false;
-                                            if this_channel_data.current_topic.is_none() {
-                                                // No topic to time out.
-                                                return;
-                                            } else if Instant::now()
-                                                >= this_channel_data.last_activity
-                                                    + this_channel_data.activity_timeout_duration
-                                            {
-                                                this_channel_data.end_topic(&irc, event_loop);
-                                                return;
-                                            }
+                                            this_channel_data.end_topic(&irc, event_loop);
+                                            return;
                                         }
-                                        // We need to create a new timeout (outside the borrow_mut
-                                        // scope above, really an else on the chain inside).
-                                        create_timeout(&irc, this_channel_data_cell, event_loop);
                                     }
-                                })
-                                .map_err(panic_on_err);
-                            this_channel_data.have_activity_timeout = true;
-                            event_loop.spawn(timeout);
+                                    // We need to create a new timeout (outside the write
+                                    // scope above, really an else on the chain inside).
+                                    create_timeout(&irc, this_channel_data_cell, event_loop);
+                                }
+                            });
+                            let _ = event_loop.spawn(timeout);
                         }
 
                         if {
-                            let this_channel_data = this_channel_data_cell.borrow();
+                            let this_channel_data = this_channel_data_cell.read().unwrap();
                             this_channel_data.current_topic.is_some()
                                 && !this_channel_data.have_activity_timeout
                         } {
@@ -323,7 +315,7 @@ pub fn code_description() -> &'static String {
 }
 
 fn handle_bot_command(
-    irc: &IrcClient,
+    irc: &'static IrcClient,
     config: &'static BotConfig,
     irc_state: &mut IRCState,
     command: &str,
@@ -389,11 +381,7 @@ fn handle_bot_command(
                     ),
                 );
             }
-            let owners = if let Some(v) = irc.config().owners.as_ref() {
-                v.join(" ")
-            } else {
-                String::from("")
-            };
+            let owners = config.owners.join(" ");
             send_line(
                 None,
                 &*format!(
@@ -415,7 +403,7 @@ fn handle_bot_command(
             let mut sorted_channels: Vec<&String> = irc_state.channel_data.keys().collect();
             sorted_channels.sort();
             for channel in sorted_channels {
-                let channel_data = irc_state.channel_data[channel].borrow();
+                let channel_data = irc_state.channel_data[channel].read().unwrap();
                 if let Some(ref topic) = channel_data.current_topic {
                     send_line(
                         None,
@@ -440,8 +428,10 @@ fn handle_bot_command(
         "bye" => {
             if response_target.starts_with('#') {
                 let event_loop = irc_state.event_loop.clone(); // FIXME: refactor away clone
-                let mut this_channel_data =
-                    irc_state.channel_data(response_target, config).borrow_mut();
+                let mut this_channel_data = irc_state
+                    .channel_data(response_target, config)
+                    .write()
+                    .unwrap();
                 this_channel_data.end_topic(irc, event_loop);
                 irc.send(Command::PART(
                     String::from(response_target),
@@ -458,8 +448,10 @@ fn handle_bot_command(
         "end topic" => {
             if response_target.starts_with('#') {
                 let event_loop = irc_state.event_loop.clone(); // FIXME: refactor away clone
-                let mut this_channel_data =
-                    irc_state.channel_data(response_target, config).borrow_mut();
+                let mut this_channel_data = irc_state
+                    .channel_data(response_target, config)
+                    .write()
+                    .unwrap();
                 this_channel_data.end_topic(irc, event_loop);
             } else {
                 send_line(response_username, "'end topic' only works in a channel");
@@ -470,7 +462,7 @@ fn handle_bot_command(
                 .channel_data
                 .iter()
                 .filter_map(|(channel, channel_data)| {
-                    if channel_data.borrow().current_topic.is_some() {
+                    if channel_data.read().unwrap().current_topic.is_some() {
                         Some(channel)
                     } else {
                         None
@@ -515,7 +507,7 @@ fn handle_bot_command(
 /// The data from IRC channels that we're storing in order to make comments in
 /// github.
 pub struct IRCState {
-    channel_data: HashMap<String, Rc<RefCell<ChannelData>>>,
+    channel_data: HashMap<String, Arc<RwLock<ChannelData>>>,
     github_type: GithubType,
     event_loop: Handle,
 }
@@ -534,12 +526,12 @@ impl IRCState {
         &mut self,
         channel: &str,
         config: &'static BotConfig,
-    ) -> &Rc<RefCell<ChannelData>> {
+    ) -> &Arc<RwLock<ChannelData>> {
         let github_type = self.github_type;
         self.channel_data
             .entry(String::from(channel))
             .or_insert_with(|| {
-                Rc::new(RefCell::new(ChannelData::new(channel, config, github_type)))
+                Arc::new(RwLock::new(ChannelData::new(channel, config, github_type)))
             })
     }
 }
@@ -743,7 +735,7 @@ impl ChannelData {
     // FIXME: Move this to be a method on IRCState.
     fn add_line(
         &mut self,
-        irc: &IrcClient,
+        irc: &'static IrcClient,
         target: &String,
         event_loop: Handle,
         line: ChannelLine,
@@ -805,7 +797,7 @@ impl ChannelData {
                         let respond_title_future = match github {
                             // When mocking the github connection for tests, pretend it's "TITLE".
                             // FIXME: Are there now better methods for this in futures 0.3?
-                            None => Either::Left(future::ok(String::from("TITLE"))),
+                            None => Either::Left(future::ok::<String, ()>(String::from("TITLE"))),
                             Some(github) => Either::Right({
                                 let repo = github.repo(new_url.owner, new_url.repo);
                                 let num = new_url.number;
@@ -830,7 +822,7 @@ impl ChannelData {
                                 }
                             }
                         });
-                        event_loop.spawn(respond_title_future.compat());
+                        let _ = event_loop.spawn(respond_title_future);
                     }
                 };
 
@@ -858,7 +850,7 @@ impl ChannelData {
     }
 
     // FIXME: Move this to be a method on IRCState.
-    fn start_topic(&mut self, irc: &IrcClient, event_loop: Handle, topic: &str) {
+    fn start_topic(&mut self, irc: &'static IrcClient, event_loop: Handle, topic: &str) {
         self.end_topic(irc, event_loop);
         let group = &self
             .config
@@ -870,7 +862,7 @@ impl ChannelData {
     }
 
     // FIXME: Move this to be a method on IRCState.
-    fn end_topic(&mut self, irc: &IrcClient, event_loop: Handle) {
+    fn end_topic(&mut self, irc: &'static IrcClient, event_loop: Handle) {
         // TODO: Test the topic boundary code.
         if let Some(topic) = self.current_topic.take() {
             if topic.github_url.is_some() {
@@ -1039,7 +1031,7 @@ fn github_connection(config: &BotConfig, github_type: GithubType) -> Option<Gith
 
 struct GithubCommentTask {
     // a clone of the IRCServer is OK, because it reference-counts almost all of its internals
-    irc: IrcClient,
+    irc: &'static IrcClient,
     response_target: String,
     data: TopicData,
     github: Option<Github>, /* None means we're mocking the connection */
@@ -1048,7 +1040,7 @@ struct GithubCommentTask {
 
 impl GithubCommentTask {
     fn new(
-        irc_: &IrcClient,
+        irc_: &'static IrcClient,
         event_loop_: Handle,
         response_target_: &str,
         data_: TopicData,
@@ -1057,7 +1049,7 @@ impl GithubCommentTask {
     ) -> GithubCommentTask {
         let github_ = github_connection(config, github_type_);
         GithubCommentTask {
-            irc: irc_.clone(),
+            irc: irc_,
             response_target: String::from(response_target_),
             data: data_,
             github: github_,
@@ -1075,7 +1067,7 @@ impl GithubCommentTask {
                 let comment_text = format!("{}", self.data);
 
                 let send_response = {
-                    let irc = self.irc.clone();
+                    let irc = self.irc;
                     let target = self.response_target.clone();
                     move |response: String| {
                         send_irc_line(&irc, &*target, true, response);
@@ -1106,12 +1098,12 @@ impl GithubCommentTask {
                             }
                         };
 
-                        self.event_loop.spawn(labels_future.then({
+                        let _ = self.event_loop.spawn(labels_future.then({
                             let github_url = github_url.url.clone();
                             let remove_from_agenda = self.data.remove_from_agenda;
                             move |labels_result| {
                             match labels_result {
-                                Err(err) => Either::Left(future::ok(format!("UNABLE TO RETRIEVE LABELS ON {} due to error: {:?}", github_url, err))),
+                                Err(err) => Either::Left(future::ok::<String, ()>(format!("UNABLE TO RETRIEVE LABELS ON {} due to error: {:?}", github_url, err))),
                                 Ok(labels_vec) => {
 
                                     let commentopts = &CommentOptions { body: comment_text };
@@ -1165,7 +1157,7 @@ impl GithubCommentTask {
                                 }
                             }
                         }})
-                        .map_ok(move |s| send_response(s)).compat());
+                        .map_ok(move |s| send_response(s)));
                     }
                     None => {
                         // Mock the github comments by sending them over IRC
