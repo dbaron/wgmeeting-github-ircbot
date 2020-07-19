@@ -1446,7 +1446,7 @@ dependencies = [
 
 [[package]]
 name = "wgmeeting_github_ircbot"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "diff 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
