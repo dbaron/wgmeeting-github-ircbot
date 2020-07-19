@@ -1,5 +1,5 @@
 // see 'rustc -W help'
-#![warn(missing_docs, unused_extern_crates, unused_results)]
+#![warn(missing_docs, unused, unused_results)]
 
 //! An IRC bot that posts comments to github when W3C-style IRC minuting is
 //! combined with "Github:", "Github topic:", or "Github issue:" lines that

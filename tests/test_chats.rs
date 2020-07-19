@@ -1,5 +1,5 @@
 // see 'rustc -W help'
-#![warn(missing_docs, unused_extern_crates, unused_results)]
+#![warn(missing_docs, unused, unused_results)]
 
 //! Test all of the tests in chats/, which are .txt files formatted with IRC
 //! input beginning with <, expected IRC output beginning with >, and expected
