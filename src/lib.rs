@@ -1,6 +1,5 @@
 // see 'rustc -W help'
 #![warn(missing_docs, unused, unused_results, nonstandard_style, rust_2018_compatibility, rust_2018_idioms)]
-#![allow(elided_lifetimes_in_paths)]
 
 //! An IRC bot that posts comments to github when W3C-style IRC minuting is
 //! combined with "Github:", "Github topic:", or "Github issue:" lines that
@@ -539,7 +538,7 @@ struct ChannelData {
 }
 
 impl fmt::Display for ChannelLine {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_action {
             write!(f, "* {} {}", self.source, self.message)
         } else {
@@ -618,7 +617,7 @@ fn escape_for_html_block(s: &str) -> String {
 }
 
 impl fmt::Display for TopicData {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Use `...` around the topic and resolutions, and ```-escaping around
         // the IRC log to avoid most concern about escaping.
         write!(

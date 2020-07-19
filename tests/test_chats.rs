@@ -1,6 +1,5 @@
 // see 'rustc -W help'
 #![warn(missing_docs, unused, unused_results, nonstandard_style, rust_2018_compatibility, rust_2018_idioms)]
-#![allow(elided_lifetimes_in_paths)]
 
 //! Test all of the tests in chats/, which are .txt files formatted with IRC
 //! input beginning with <, expected IRC output beginning with >, and expected
