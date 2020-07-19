@@ -133,10 +133,6 @@ async fn mock_irc_server(chat_file_lines: &Vec<Vec<u8>>, is_finished: &Cell<bool
     debug!("IRC server got incoming connection: nodelay={} recv_buffer_size={} send_buffer_size={}", tcp_stream.nodelay().unwrap(), tcp_stream.recv_buffer_size().unwrap(), tcp_stream.send_buffer_size().unwrap());
     let (reader, mut writer) = tcp_stream.split();
 
-    fn first_char(line: &Vec<u8>) -> Option<char> {
-        line.first().map(|b| *b as char)
-    }
-
     let reader_future = async {
         let mut lines = BufReader::new(reader).lines();
         while let Some(line) = lines.next_line().await? {
@@ -168,8 +164,8 @@ async fn mock_irc_server(chat_file_lines: &Vec<Vec<u8>>, is_finished: &Cell<bool
 
     let writer_future = async {
         for line in chat_file_lines.iter() {
-            let ch = first_char(line);
-            if ch == Some('>') || ch == Some('!') {
+            let first_char = line.first().map(|b| *b as char);
+            if first_char == Some('>') || first_char == Some('!') {
                 // This is a line we should expect to recieve from the bot.  Note this in
                 // |wait_lines_data|, which |reader_future| will use to adjust its timing.
                 let mut wait_lines_data = wait_lines_data.borrow_mut();
@@ -177,7 +173,7 @@ async fn mock_irc_server(chat_file_lines: &Vec<Vec<u8>>, is_finished: &Cell<bool
                 wait_lines_data.wait_deadline = Instant::now() + WAIT_DURATION;
             }
 
-            if ch != Some('<') {
+            if first_char != Some('<') {
                 continue
             }
 
