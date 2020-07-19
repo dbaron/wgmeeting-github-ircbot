@@ -30,7 +30,7 @@ async fn test_chats() -> Result<(), failure::Error> {
     let chats_dir = Path::new(file!()).parent().unwrap().join("chats");
     info!("Going through {:?}", chats_dir);
     let mut fail_count = 0;
-    for direntry in chats_dir.read_dir().unwrap() {
+    for direntry in chats_dir.read_dir()? {
         if let Ok(direntry) = direntry {
             if !test_one_chat(direntry.path().as_path()).await? {
                 fail_count += 1;
@@ -55,10 +55,7 @@ async fn test_one_chat(path: &Path) -> Result<bool, failure::Error> {
     // All of the lines in the chat file, as a vec (lines) of vecs (bytes).
     let chat_file_lines = {
         let mut file_bytes: Vec<u8> = Vec::new();
-        let _size = File::open(path)
-            .unwrap()
-            .read_to_end(&mut file_bytes)
-            .unwrap();
+        let _size = File::open(path)?.read_to_end(&mut file_bytes)?;
         file_bytes
     }
     .split(|byte| *byte == '\n' as u8)
@@ -74,9 +71,9 @@ async fn test_one_chat(path: &Path) -> Result<bool, failure::Error> {
     let _ = bot_result?;
     let actual_lines = actual_lines?;
 
-    let actual_str = str::from_utf8(actual_lines.as_slice()).unwrap();
+    let actual_str = str::from_utf8(actual_lines.as_slice())?;
     let expected_lines = chat_lines_to_expected_lines(&chat_file_lines);
-    let expected_str = str::from_utf8(expected_lines.as_slice()).unwrap();
+    let expected_str = str::from_utf8(expected_lines.as_slice())?;
     let test_pass = actual_str == expected_str;
     println!("\n{:?} {}", path, if test_pass { "PASS" } else { "FAIL" });
     if !test_pass {
@@ -129,8 +126,8 @@ async fn mock_irc_server(chat_file_lines: &Vec<Vec<u8>>, is_finished: &Cell<bool
     let irc_server_addr = format!("{}:{}", MOCK_SERVER_HOST, MOCK_SERVER_PORT);
     let mut irc_server_listener = TcpListener::bind(&irc_server_addr).await?;
     let (mut tcp_stream, _socket_addr) = irc_server_listener.accept().await?;
-    tcp_stream.set_nodelay(true).unwrap();
-    debug!("IRC server got incoming connection: nodelay={} recv_buffer_size={} send_buffer_size={}", tcp_stream.nodelay().unwrap(), tcp_stream.recv_buffer_size().unwrap(), tcp_stream.send_buffer_size().unwrap());
+    tcp_stream.set_nodelay(true)?;
+    debug!("IRC server got incoming connection: nodelay={} recv_buffer_size={} send_buffer_size={}", tcp_stream.nodelay()?, tcp_stream.recv_buffer_size()?, tcp_stream.send_buffer_size()?);
     let (reader, mut writer) = tcp_stream.split();
 
     let reader_future = async {
@@ -184,7 +181,7 @@ async fn mock_irc_server(chat_file_lines: &Vec<Vec<u8>>, is_finished: &Cell<bool
             // note that line still begins with '<'
             // FIXME: Clean up this total hack for \u{1} !
             // (The other direction uses escape_default().)
-            let mut line_str = str::from_utf8(&line[1..]).unwrap().replace("\\u{1}", "\u{1}");
+            let mut line_str = str::from_utf8(&line[1..])?.replace("\\u{1}", "\u{1}");
             debug!("IRC server writing line: {}", line_str);
             line_str.push_str("\r\n");
 
