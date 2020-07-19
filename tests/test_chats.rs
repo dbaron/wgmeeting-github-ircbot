@@ -297,6 +297,8 @@ async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<(), failure::Error> {
 
     let mut irc_stream = irc_client.stream()?.take_until(finished_cb);
     while let Some(message) = irc_stream.next().await.transpose()? {
+        // This is where we call into the IRC bot's logic, i.e., where we call the code that's
+        // being tested here.
         process_irc_message(irc_client, &mut irc_state, &BOT_CONFIG, message);
     }
 
