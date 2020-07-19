@@ -1,5 +1,12 @@
 // see 'rustc -W help'
-#![warn(missing_docs, unused, unused_results, nonstandard_style, rust_2018_compatibility, rust_2018_idioms)]
+#![warn(
+    missing_docs,
+    unused,
+    unused_results,
+    nonstandard_style,
+    rust_2018_compatibility,
+    rust_2018_idioms
+)]
 
 //! An IRC bot that posts comments to github when W3C-style IRC minuting is
 //! combined with "Github:", "Github topic:", or "Github issue:" lines that
@@ -709,12 +716,7 @@ impl ChannelData {
 
     // Returns the response that should be sent to the message over IRC.
     // FIXME: Move this to be a method on IRCState.
-    fn add_line(
-        &mut self,
-        irc: &'static IrcClient,
-        target: &String,
-        line: ChannelLine,
-    ) {
+    fn add_line(&mut self, irc: &'static IrcClient, target: &String, line: ChannelLine) {
         match line.is_action {
             false => {
                 if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {

@@ -1,5 +1,12 @@
 // see 'rustc -W help'
-#![warn(missing_docs, unused, unused_results, nonstandard_style, rust_2018_compatibility, rust_2018_idioms)]
+#![warn(
+    missing_docs,
+    unused,
+    unused_results,
+    nonstandard_style,
+    rust_2018_compatibility,
+    rust_2018_idioms
+)]
 
 //! Test all of the tests in chats/, which are .txt files formatted with IRC
 //! input beginning with <, expected IRC output beginning with >, and expected
@@ -92,7 +99,10 @@ async fn test_one_chat(path: &Path) -> Result<bool, failure::Error> {
 /// Run the fake IRC server for the chat test, driving the dialog based on the chat file.
 /// Record the entire conversation and return that recording for comparison with the expected
 /// result.
-async fn mock_irc_server(chat_file_lines: &Vec<Vec<u8>>, is_finished: &Cell<bool>) -> Result<Vec<u8>, failure::Error> {
+async fn mock_irc_server(
+    chat_file_lines: &Vec<Vec<u8>>,
+    is_finished: &Cell<bool>,
+) -> Result<Vec<u8>, failure::Error> {
     let actual_lines = RefCell::new(Vec::<u8>::new());
 
     struct WaitLinesData {
@@ -127,14 +137,19 @@ async fn mock_irc_server(chat_file_lines: &Vec<Vec<u8>>, is_finished: &Cell<bool
     let mut irc_server_listener = TcpListener::bind(&irc_server_addr).await?;
     let (mut tcp_stream, _socket_addr) = irc_server_listener.accept().await?;
     tcp_stream.set_nodelay(true)?;
-    debug!("IRC server got incoming connection: nodelay={} recv_buffer_size={} send_buffer_size={}", tcp_stream.nodelay()?, tcp_stream.recv_buffer_size()?, tcp_stream.send_buffer_size()?);
+    debug!(
+        "IRC server got incoming connection: nodelay={} recv_buffer_size={} send_buffer_size={}",
+        tcp_stream.nodelay()?,
+        tcp_stream.recv_buffer_size()?,
+        tcp_stream.send_buffer_size()?
+    );
     let (reader, mut writer) = tcp_stream.split();
 
     let reader_future = async {
         let mut lines = BufReader::new(reader).lines();
         while let Some(line) = lines.next_line().await? {
             if line.starts_with("PING ") {
-                continue
+                continue;
             }
             debug!("IRC server read line: {}", line);
 
@@ -171,7 +186,7 @@ async fn mock_irc_server(chat_file_lines: &Vec<Vec<u8>>, is_finished: &Cell<bool
             }
 
             if first_char != Some('<') {
-                continue
+                continue;
             }
 
             while wait_lines_data.borrow().should_wait() {
@@ -264,9 +279,7 @@ async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<(), failure::Error> {
 
     let mut irc_state = IRCState::new(GithubType::MockGithubConnection);
 
-    let irc_client: &'static mut _ = Box::leak(Box::new(
-        IrcClient::from_config(irc_config).await?,
-    ));
+    let irc_client: &'static mut _ = Box::leak(Box::new(IrcClient::from_config(irc_config).await?));
 
     irc_client.identify()?;
 
@@ -318,8 +331,7 @@ fn chat_lines_to_expected_lines(chat_file_lines: &Vec<Vec<u8>>) -> Vec<u8> {
                 // for now, we send the github comments over IRC when
                 // testing, but we don't encode that into the chat
                 // format
-                expected_lines
-                    .append(&mut ">PRIVMSG github-comments ".bytes().collect());
+                expected_lines.append(&mut ">PRIVMSG github-comments ".bytes().collect());
                 // Match use of ":" in the stringify function in irc-proto's
                 // src/command.rs.
                 if line.len() == 1 || line.contains(&0x20u8 /* space */) {

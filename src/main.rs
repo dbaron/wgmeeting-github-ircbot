@@ -1,5 +1,12 @@
 // see 'rustc -W help'
-#![warn(missing_docs, unused, unused_results, nonstandard_style, rust_2018_compatibility, rust_2018_idioms)]
+#![warn(
+    missing_docs,
+    unused,
+    unused_results,
+    nonstandard_style,
+    rust_2018_compatibility,
+    rust_2018_idioms
+)]
 
 //! An IRC bot that posts comments to github when W3C-style IRC minuting is
 //! combined with "Github topic:" or "Github issue:" lines that give the
@@ -53,8 +60,7 @@ async fn main() -> Result<(), failure::Error> {
 
     let mut irc_state = IRCState::new(GithubType::RealGithubConnection);
 
-    let irc_client: &'static mut _ =
-        Box::leak(Box::new(IrcClient::from_config(irc_config).await?));
+    let irc_client: &'static mut _ = Box::leak(Box::new(IrcClient::from_config(irc_config).await?));
     irc_client.identify()?;
 
     let mut irc_stream = irc_client.stream()?;
