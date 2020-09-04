@@ -465,6 +465,8 @@ fn handle_bot_command(
                 ))))
                 .unwrap();
 
+                // FIXME: Wait for the above sending to complete!
+
                 // exit, and assume whatever started the bot will restart it
                 unimplemented!(); // This will exit.  Maybe do something cleaner later?
             } else {
