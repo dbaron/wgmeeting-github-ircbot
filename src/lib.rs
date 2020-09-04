@@ -455,6 +455,8 @@ fn handle_bot_command(
                 })
                 .collect::<Vec<_>>();
             if channels_with_topics.is_empty() {
+                send_line(response_username, "OK, I'll reboot now.");
+
                 // quit from the server, with a message
                 irc.send(Command::QUIT(Some(format!(
                     "{}, rebooting at request of {}.",
