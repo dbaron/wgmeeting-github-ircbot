@@ -164,3 +164,10 @@ group = "Advisory Board"
 github_repos_allowed = [
     "w3c/ab-memberonly",
 ]
+
+[channels."#webdriver"]
+group = "Browser Testing and Tools Working Group"
+github_repos_allowed = [
+    "w3c/webdriver",
+    "w3c/webdriver-bidi",
+]
