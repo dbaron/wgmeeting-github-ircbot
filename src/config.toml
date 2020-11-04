@@ -171,3 +171,10 @@ github_repos_allowed = [
     "w3c/webdriver",
     "w3c/webdriver-bidi",
 ]
+
+[channels."#epub"]
+group = "EPUB 3 Working Group"
+github_repos_allowed = [
+    "w3c/epub-wg",
+    "w3c/publ-epub-revision",
+]
