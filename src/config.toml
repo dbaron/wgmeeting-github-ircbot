@@ -16,6 +16,12 @@ github_uastring = "wgmeeting-github-ircbot/0.1.0"
 activity_timeout_minutes = 90
 owners = ["dbaron"]
 
+[channels."#cssbotprod"]
+group = "Testing of the production instance of this IRC bot."
+github_repos_allowed = [
+    "dbaron/wgmeeting-github-ircbot",
+]
+
 [channels."#css"]
 group = "CSS Working Group"
 github_repos_allowed = [
