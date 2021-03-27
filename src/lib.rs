@@ -465,10 +465,13 @@ fn handle_bot_command(
                 ))))
                 .unwrap();
 
-                // FIXME: Wait for the above sending to complete!
-
-                // exit, and assume whatever started the bot will restart it
-                unimplemented!(); // This will exit.  Maybe do something cleaner later?
+                // Wait for 500ms to allow the sending to complete.
+                // FIXME: Should actually wait on something appropriate!
+                let timeout = tokio::time::delay_for(Duration::from_millis(500)).map(|()| {
+                    // exit, and assume whatever started the bot will restart it
+                    unimplemented!(); // This will exit.  Maybe do something cleaner later?
+                });
+                let _ = tokio::spawn(timeout);
             } else {
                 // refuse to reboot
                 channels_with_topics.sort();
