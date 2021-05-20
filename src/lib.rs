@@ -469,7 +469,7 @@ fn handle_bot_command(
                 // FIXME: Should actually wait on something appropriate!
                 let timeout = tokio::time::delay_for(Duration::from_millis(500)).map(|()| {
                     // exit, and assume whatever started the bot will restart it
-                    unimplemented!(); // This will exit.  Maybe do something cleaner later?
+                    std::process::exit(0);
                 });
                 let _ = tokio::spawn(timeout);
             } else {
