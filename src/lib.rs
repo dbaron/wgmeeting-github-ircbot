@@ -46,6 +46,7 @@ pub struct BotConfig {
     #[serde(skip)]
     pub channels: HashMap<String, ChannelConfig>,
     /// UA String used for accessing GitHub.
+    #[serde(default = "default_ua_string")]
     pub github_uastring: String,
     /// End activity after the given number of minutes.
     pub activity_timeout_minutes: u64,
@@ -54,6 +55,10 @@ pub struct BotConfig {
     pub github_access_token: String,
     /// Bot owner IRC nicks, duplicate of what's in the IRC configuration.
     pub owners: Vec<String>,
+}
+
+fn default_ua_string() -> String {
+    concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")).to_string()
 }
 
 #[derive(Copy, Clone)]

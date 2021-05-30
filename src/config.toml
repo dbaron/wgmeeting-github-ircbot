@@ -12,7 +12,6 @@ user_info = "Bot to add meeting minutes to github issues."
 
 [bot]
 source = "https://github.com/dbaron/wgmeeting-github-ircbot"
-github_uastring = "wgmeeting-github-ircbot/0.4.4"
 activity_timeout_minutes = 90
 owners = ["dbaron"]
 
