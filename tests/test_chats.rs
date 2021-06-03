@@ -270,6 +270,13 @@ async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<(), failure::Error> {
                     ],
                     publish_resolutions_only: false,
                 }),
+                (format!("#testresolutionsonly"), ChannelConfig {
+                    group: format!("Third Bot-Testing Working Group"),
+                    github_repos_allowed: vec![
+                        "dbaron/wgmeeting-github-ircbot".to_string(),
+                    ],
+                    publish_resolutions_only: true,
+                }),
             ].into_iter().collect(),
             // Use of a 0 value disables timeouts, which is needed to avoid intermittent
             // failures (using really-0 timeouts) or having the event loop wait until the

@@ -1,0 +1,16 @@
+<:dbaron!sid755@public.cloak PRIVMSG #testresolutionsonly :Topic: line-height
+<:dbaron!sid755@public.cloak PRIVMSG #testresolutionsonly :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/51
+>PRIVMSG #testresolutionsonly :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/51 (TITLE).\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #testresolutionsonly :This is a simple Test.
+<:dbaron!sid755@public.cloak PRIVMSG #testresolutionsonly :Topic: font-size
+<:dbaron!sid755@public.cloak PRIVMSG #testresolutionsonly :github: https://github.com/dbaron/wgmeeting-github-ircbot/issues/51
+>PRIVMSG #testresolutionsonly :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/51 (TITLE).\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #testresolutionsonly :RESOLVED make the font size larger
+<:dbaron!sid755@public.cloak PRIVMSG #testresolutionsonly :Topic: font-size-adjust
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/51
+!The Third Bot-Testing Working Group just discussed `font-size`, and agreed to the following:
+!
+!* `RESOLVED make the font size larger`
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/51
+>PRIVMSG #testresolutionsonly :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/51\u{1}
