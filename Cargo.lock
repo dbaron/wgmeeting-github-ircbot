@@ -1491,7 +1491,7 @@ dependencies = [
 
 [[package]]
 name = "wgmeeting_github_ircbot"
-version = "0.4.4"
+version = "0.4.5"
 dependencies = [
  "diff",
  "env_logger",
