@@ -80,7 +80,7 @@ async fn test_one_chat(path: &Path) -> Result<bool, failure::Error> {
     let actual_lines = actual_lines?;
 
     let actual_str = str::from_utf8(actual_lines.as_slice())?;
-    let expected_lines = chat_lines_to_expected_lines(&chat_file_lines);
+    let expected_lines = chat_lines_to_expected_lines(path, &chat_file_lines);
     let expected_str = str::from_utf8(expected_lines.as_slice())?;
     let test_pass = actual_str == expected_str;
     println!("\n{:?} {}", path, if test_pass { "PASS" } else { "FAIL" });
@@ -310,7 +310,7 @@ async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<(), failure::Error> {
 
 /// Convert the lines in the chat file to the dialog that the test should expect to have been
 /// recorded by the IRC server.
-fn chat_lines_to_expected_lines(chat_file_lines: &Vec<Vec<u8>>) -> Vec<u8> {
+fn chat_lines_to_expected_lines(path: &Path, chat_file_lines: &Vec<Vec<u8>>) -> Vec<u8> {
     let mut expected_lines = ">CAP END\r\n>NICK test-github-bot\r\n>USER dbaron-gh-bot 0 * :Bot to add meeting minutes to github issues.\r\n".bytes().collect::<Vec<u8>>();
 
     for line in chat_file_lines.iter() {
@@ -347,9 +347,8 @@ fn chat_lines_to_expected_lines(chat_file_lines: &Vec<Vec<u8>>) -> Vec<u8> {
             }
             _ => {
                 panic!(
-                    //"Unexpected line in test file {:?}:\n{}",
-                    // path,
-                    "Unexpected line in test file:\n{}",
+                    "Unexpected line in test file {:?}:\n{}",
+                    path,
                     str::from_utf8(line).unwrap_or("[non-UTF-8 line]")
                 );
             }
