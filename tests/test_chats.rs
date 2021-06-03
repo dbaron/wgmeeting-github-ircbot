@@ -46,7 +46,8 @@ async fn test_chats() -> Result<(), failure::Error> {
     }
     assert!(
         fail_count == 0,
-        format!("{} chat test failure(s), see above", fail_count)
+        "{} chat test failure(s), see above",
+        fail_count
     );
 
     Ok(())
@@ -108,7 +109,7 @@ async fn mock_irc_server(
     struct WaitLinesData {
         expect_lines: i32,
         wait_deadline: Instant,
-    };
+    }
 
     impl WaitLinesData {
         pub fn should_wait(&self) -> bool {
@@ -123,7 +124,7 @@ async fn mock_irc_server(
             }
             result
         }
-    };
+    }
 
     const WAIT_DURATION: Duration = Duration::from_millis(100u64);
     const SERVER_SHUTDOWN_DURATION: Duration = Duration::from_millis(10u64);
