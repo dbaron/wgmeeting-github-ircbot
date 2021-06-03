@@ -35,6 +35,9 @@ pub struct ChannelConfig {
     pub group: String,
     /// GitHub repos that the bot can make comments on.
     pub github_repos_allowed: Vec<String>,
+    /// Whether github comments should be resolutions only (rather than full log).
+    #[serde(default)] // false
+    pub publish_resolutions_only: bool,
 }
 
 /// Configuration of the bot.
@@ -544,6 +547,7 @@ struct TopicData {
     lines: Vec<ChannelLine>,
     resolutions: Vec<String>,
     remove_from_agenda: bool,
+    publish_resolutions_only: bool,
 }
 
 struct ChannelData {
@@ -567,9 +571,10 @@ impl fmt::Display for ChannelLine {
 }
 
 impl TopicData {
-    fn new(topic: &str, group: &str) -> TopicData {
+    fn new(topic: &str, group: &str, publish_resolutions_only: bool) -> TopicData {
         let topic_ = String::from(topic);
         let group_ = String::from(group);
+        let publish_resolutions_only_ = publish_resolutions_only;
         TopicData {
             topic: topic_,
             group: group_,
@@ -577,7 +582,12 @@ impl TopicData {
             lines: vec![],
             resolutions: vec![],
             remove_from_agenda: false,
+            publish_resolutions_only: publish_resolutions_only_,
         }
+    }
+
+    fn should_comment(&self) -> bool {
+        self.github_url.is_some() && (self.resolutions.len() != 0 || !self.publish_resolutions_only)
     }
 }
 
@@ -658,15 +668,17 @@ impl fmt::Display for TopicData {
             }
         }
 
-        write!(
-            f,
-            "\n<details><summary>The full IRC log of that \
-             discussion</summary>\n"
-        )?;
-        for line in &self.lines {
-            write!(f, "{}<br>\n", escape_for_html_block(&*format!("{}", line)))?;
+        if !self.publish_resolutions_only {
+            write!(
+                f,
+                "\n<details><summary>The full IRC log of that \
+                 discussion</summary>\n"
+            )?;
+            for line in &self.lines {
+                write!(f, "{}<br>\n", escape_for_html_block(&*format!("{}", line)))?;
+            }
+            write!(f, "</details>\n")?;
         }
-        write!(f, "</details>\n")?;
         Ok(())
     }
 }
@@ -841,20 +853,24 @@ impl ChannelData {
     // FIXME: Move this to be a method on IRCState.
     fn start_topic(&mut self, irc: &'static IrcClient, topic: &str) {
         self.end_topic(irc);
-        let group = &self
+        let channel_config = &self
             .config
             .channels
             .get(&self.channel_name)
-            .expect("How are we in an unconfigured channel?")
-            .group;
-        self.current_topic = Some(TopicData::new(topic, group));
+            .expect("How are we in an unconfigured channel?");
+        let group = &channel_config.group;
+        self.current_topic = Some(TopicData::new(
+            topic,
+            group,
+            channel_config.publish_resolutions_only,
+        ));
     }
 
     // FIXME: Move this to be a method on IRCState.
     fn end_topic(&mut self, irc: &'static IrcClient) {
         // TODO: Test the topic boundary code.
         if let Some(topic) = self.current_topic.take() {
-            if topic.github_url.is_some() {
+            if topic.should_comment() {
                 let task = GithubCommentTask::new(
                     irc,
                     &*self.channel_name,

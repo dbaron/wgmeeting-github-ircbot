@@ -169,6 +169,7 @@ group = "Advisory Board"
 github_repos_allowed = [
     "w3c/ab-memberonly",
 ]
+publish_resolutions_only = true
 
 [channels."#webdriver"]
 group = "Browser Testing and Tools Working Group"

@@ -260,12 +260,14 @@ async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<(), failure::Error> {
                         "dbaron/nonexistentrepo".to_string(),
                         "upsuper/*".to_string(),
                     ],
+                    publish_resolutions_only: false,
                 }),
                 (format!("#testchannel2"), ChannelConfig {
                     group: format!("Second Bot-Testing Working Group"),
                     github_repos_allowed: vec![
                         "dbaron/wgmeeting-github-ircbot".to_string(),
                     ],
+                    publish_resolutions_only: false,
                 }),
             ].into_iter().collect(),
             // Use of a 0 value disables timeouts, which is needed to avoid intermittent
