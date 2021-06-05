@@ -12,7 +12,7 @@ log = "0.4"
 env_logger = "0.8"
 irc = { version = "0.15", default-features = false, features = ["tls-rust", "serde"] }
 lazy_static = "1.4"
-regex = "1.4"
+regex = "1.5"
 tokio = { version = "1.6", features = ["rt", "macros", "time", "io-util", "net"] }
 # hubcaps = { version = "0.6.2", default-features = false, features = [ "rustls-tls" ] }
 hubcaps = { git = "https://github.com/softprops/hubcaps", branch = "master", default-features = false, features = [ "rustls-tls" ] }
