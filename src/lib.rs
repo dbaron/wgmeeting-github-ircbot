@@ -158,7 +158,7 @@ pub fn process_irc_message(
                                 this_channel_data.last_activity
                                     + this_channel_data.activity_timeout_duration
                             };
-                            let timeout = tokio::time::delay_until(deadline).map({
+                            let timeout = tokio::time::sleep_until(deadline).map({
                                 let irc = irc.clone();
                                 let this_channel_data_cell = this_channel_data_cell.clone();
                                 move |_timeout| {
@@ -475,7 +475,7 @@ fn handle_bot_command(
 
                 // Wait for 500ms to allow the sending to complete.
                 // FIXME: Should actually wait on something appropriate!
-                let timeout = tokio::time::delay_for(Duration::from_millis(500)).map(|()| {
+                let timeout = tokio::time::sleep(Duration::from_millis(500)).map(|()| {
                     // exit, and assume whatever started the bot will restart it
                     std::process::exit(0);
                 });

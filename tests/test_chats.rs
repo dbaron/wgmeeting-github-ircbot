@@ -30,7 +30,7 @@ use wgmeeting_github_ircbot::*;
 const MOCK_SERVER_HOST: &str = "127.0.0.1";
 const MOCK_SERVER_PORT: u16 = 43210;
 
-#[tokio::test]
+#[tokio::test(flavor = "current_thread")]
 async fn test_chats() -> Result<(), failure::Error> {
     env_logger::init();
 
@@ -135,14 +135,12 @@ async fn mock_irc_server(
     });
 
     let irc_server_addr = format!("{}:{}", MOCK_SERVER_HOST, MOCK_SERVER_PORT);
-    let mut irc_server_listener = TcpListener::bind(&irc_server_addr).await?;
+    let irc_server_listener = TcpListener::bind(&irc_server_addr).await?;
     let (mut tcp_stream, _socket_addr) = irc_server_listener.accept().await?;
     tcp_stream.set_nodelay(true)?;
     debug!(
-        "IRC server got incoming connection: nodelay={} recv_buffer_size={} send_buffer_size={}",
-        tcp_stream.nodelay()?,
-        tcp_stream.recv_buffer_size()?,
-        tcp_stream.send_buffer_size()?
+        "IRC server got incoming connection: nodelay={}",
+        tcp_stream.nodelay()?
     );
     let (reader, mut writer) = tcp_stream.split();
 
@@ -191,7 +189,7 @@ async fn mock_irc_server(
             }
 
             while wait_lines_data.borrow().should_wait() {
-                tokio::time::delay_for(Duration::from_millis(1)).await;
+                tokio::time::sleep(Duration::from_millis(1)).await;
             }
 
             // note that line still begins with '<'
@@ -210,7 +208,7 @@ async fn mock_irc_server(
             let _ = writer.write_all(line_str.as_bytes()).await?;
         }
 
-        tokio::time::delay_for(SERVER_SHUTDOWN_DURATION).await;
+        tokio::time::sleep(SERVER_SHUTDOWN_DURATION).await;
 
         debug!("SHUTTING DOWN THE SERVER");
         is_finished.set(true);

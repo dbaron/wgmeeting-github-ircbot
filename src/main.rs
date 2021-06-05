@@ -50,7 +50,7 @@ fn read_config() -> (IrcConfig, BotConfig) {
     (config.irc, config.bot)
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), failure::Error> {
     env_logger::init();
     let (irc_config, bot_config) = read_config();
