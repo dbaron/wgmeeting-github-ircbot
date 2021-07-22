@@ -184,3 +184,9 @@ github_repos_allowed = [
     "w3c/epub-wg",
     "w3c/publ-epub-revision",
 ]
+
+[channels."#openui"]
+group = "Open UI Community Group"
+github_repos_allowed = [
+    "openui/open-ui",
+]
