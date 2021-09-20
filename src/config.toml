@@ -70,6 +70,7 @@ github_repos_allowed = [
     "w3c/charter-timed-text",
     "w3c/imsc",
     "w3c/imsc-tests",
+    "w3c/imsc-hrm",
     "w3c/imsc-vnext-reqs",
     "w3c/png-hdr-pq",
     "w3c/tt-module-css",
