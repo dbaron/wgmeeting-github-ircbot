@@ -191,3 +191,12 @@ group = "Open UI Community Group"
 github_repos_allowed = [
     "openui/open-ui",
 ]
+
+[channels."#editing"]
+group = "Web Editing Working Group"
+github_repos_allowed = [
+    "w3c/editing",
+    "w3c/clipboard-apis",
+    "w3c/input-events",
+    "w3c/virtual-keyboard",
+]
