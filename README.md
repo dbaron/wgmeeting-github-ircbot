@@ -8,7 +8,7 @@ happens in IRC, an IRC bot is useful here.
 
 The idea is that the bot will be in the channel, will split the IRC up
 based on "Topic:" and start/end of meeting, and then if somebody writes
-"Github topic: &lt;github-url>" at some point within a topic
+"Github: &lt;github-url>" at some point within a topic
 (changeable/cancellable also with acknowledgment), it will acknowledge
 it and then when the topic concludes, make a comment in that GitHub
 issue at the end of the topic with the resolutions, and a &lt;details>
