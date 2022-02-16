@@ -745,6 +745,9 @@ impl ChannelData {
             false => {
                 if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
                     self.start_topic(irc, topic);
+                } else if let Some(ref subtopic) = strip_ci_prefix(&line.message, "subtopic:") {
+                    // Treat subtopic: the same as topic:, at least for now.
+                    self.start_topic(irc, subtopic);
                 }
             }
             true => {

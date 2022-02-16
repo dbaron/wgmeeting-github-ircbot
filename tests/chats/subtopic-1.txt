@@ -1,0 +1,31 @@
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: line-height
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1 (TITLE).\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is a simple Test.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :subtopic: handling mix of fonts
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+!The Bot-Testing Working Group just discussed `line-height`.
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;dbaron> Topic: line-height<br>
+!&lt;dbaron> Github issue: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1<br>
+!&lt;dbaron> This is a simple Test.<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Github: https://github.com/dbaron/wgmeeting-github-ircbot/issues/7
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/7 (TITLE).\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is more discussion.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, end topic
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/7
+!The Bot-Testing Working Group just discussed `handling mix of fonts`.
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;dbaron> subtopic: handling mix of fonts<br>
+!&lt;dbaron> Github: https://github.com/dbaron/wgmeeting-github-ircbot/issues/7<br>
+!&lt;dbaron> This is more discussion.<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/7
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/7\u{1}
