@@ -199,4 +199,5 @@ github_repos_allowed = [
     "w3c/clipboard-apis",
     "w3c/input-events",
     "w3c/virtual-keyboard",
+    "w3c/edit-context",
 ]
