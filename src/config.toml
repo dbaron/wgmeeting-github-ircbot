@@ -109,6 +109,7 @@ github_repos_allowed = [
 group = "ARIA Authoring Practices (APG) Task Force"
 github_repos_allowed = [
     "w3c/aria-practices",
+    "w3c/wai-aria-practices",
 ]
 
 [channels."#aria"]
@@ -117,7 +118,8 @@ github_repos_allowed = [
     "w3c/aria",
     "w3c/aria-common",
     "w3c/core-aam",
-    "w3c/accname"
+    "w3c/accname",
+    "w3c/html-aam",
 ]
 
 [channels."#svg"]
