@@ -68,6 +68,9 @@ group = "Timed Text Working Group"
 github_repos_allowed = [
     "w3c/adpt",
     "w3c/charter-timed-text",
+    "w3c/dapt",
+    "w3c/dapt-reqs",
+    "w3c/dapt-tests",
     "w3c/imsc",
     "w3c/imsc-hrm",
     "w3c/imsc-tests",
