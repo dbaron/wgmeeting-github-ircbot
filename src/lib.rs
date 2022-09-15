@@ -1126,14 +1126,14 @@ impl GithubCommentTask {
 
                                     let mut label_tasks = Vec::new();
                                     if remove_from_agenda {
-                                        // We had resolutions, so remove the "Agenda+" and
-                                        // "Agenda+ F2F" tags, if present.
-                                        for label in ["Agenda+", "Agenda+ F2F"].iter() {
-                                            // Test for presence of the label first, so that we can
-                                            // report errors when removing it.
-                                            if labels_vec.iter().any(|ref l| l.name == *label) {
+                                        // We had resolutions, so remove any label starting with
+                                        // "Agenda+" (such as "Agenda+", "Agenda+ F2F", "Agenda+
+                                        // TPAC", etc.).
+                                        for label_obj in labels_vec {
+                                            let label = label_obj.name;
+                                            if label.starts_with("Agenda+") {
                                                 let success_str = format!(" and removed the \"{}\" label", label);
-                                                label_tasks.push(labels.remove(label).then({
+                                                label_tasks.push(labels.remove(&label).then({
                                                     let github_url = github_url.clone();
                                                     move |result| {
                                                         ok(match result {
