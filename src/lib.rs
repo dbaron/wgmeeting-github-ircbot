@@ -318,6 +318,10 @@ fn handle_bot_command(
     response_is_action: bool,
     response_username: Option<&str>,
 ) {
+    // send_line is a helper for sending IRC responses; it cannot
+    // outlive this function.
+    // FIXME: convert most callers to a send_lines() taking a vector of
+    // lines, and not passing response_username every time.
     let send_line = |response_username: Option<&str>, line: &str| {
         let line_with_nick = match response_username {
             None => String::from(line),
@@ -325,6 +329,63 @@ fn handle_bot_command(
         };
         send_irc_line(irc, response_target, response_is_action, line_with_nick);
     };
+
+    if let Some(ref take_up_argument) = strip_ci_prefix(command, "take up ") {
+        if !response_target.starts_with('#') {
+            send_line(response_username, "'take up' only works in a channel");
+            return;
+        }
+
+        match check_github_url(take_up_argument, config, response_target) {
+            (Some(Some(ref new_url)), None) => {
+                let this_channel_data_arc = irc_state.channel_data(response_target, config);
+                let mut this_channel_data = this_channel_data_arc.write().unwrap();
+                if let Some(ref topic) = this_channel_data.current_topic {
+                    if Some(new_url) == topic.github_url.as_ref() {
+                        send_line(response_username, &*format!("ignoring request to take up {} which is already the current github URL", new_url));
+                        return;
+                    }
+                }
+                this_channel_data.end_topic(irc);
+
+                let respond_title_future = fetch_github_title(
+                    this_channel_data.config,
+                    this_channel_data.github_type,
+                    new_url.clone(),
+                )
+                .map_ok({
+                    let new_url = new_url.clone();
+                    let this_channel_data_arc = Arc::clone(&this_channel_data_arc);
+                    let response_target = String::from(response_target);
+                    move |title| {
+                        let mut this_channel_data = this_channel_data_arc.write().unwrap();
+                        let response_target = &*response_target;
+
+                        send_irc_line(
+                            irc,
+                            response_target,
+                            response_is_action,
+                            format!("OK, I'll post this discussion to {}.", new_url),
+                        );
+                        this_channel_data.start_topic(irc, &title);
+                        this_channel_data
+                            .current_topic
+                            .as_mut()
+                            .expect("just started a topic")
+                            .github_url = Some(new_url);
+                        send_irc_line(irc, response_target, false, format!("Topic: {}", title));
+                    }
+                });
+                let _ = tokio::spawn(respond_title_future);
+            }
+            (None, Some(ref extract_failure_response)) => {
+                send_line(response_username, extract_failure_response)
+            }
+            _ => panic!("unexpected state"),
+        };
+
+        return;
+    }
 
     // Remove a question mark at the end of the command if it exists
     let command_without_question_mark = if command.ends_with("?") {
@@ -795,30 +856,9 @@ impl ChannelData {
                     }
                     (Some(new_url), old_url) if *old_url == *new_url => (),
                     (Some(&Some(ref new_url)), ref old_url_option) => {
-                        let new_url =
-                            GithubURL::from_string(new_url.clone()).expect("regexp failure");
-                        let github = github_connection(self.config, self.github_type);
-                        let respond_title_future = match github {
-                            // When mocking the github connection for tests, pretend it's "TITLE".
-                            // FIXME: Are there now better methods for this in futures 0.3?
-                            None => Either::Left(future::ok::<String, ()>(String::from("TITLE"))),
-                            Some(github) => Either::Right({
-                                let repo = github.repo(new_url.owner, new_url.repo);
-                                let num = new_url.number;
-                                match new_url.which {
-                                    IssuesOrPull::Issues => {
-                                        Either::Left(repo.issue(num).get().map_ok(|issue| issue.title))
-                                    }
-                                    IssuesOrPull::Pull => Either::Right(
-                                        repo.pulls().get(num).get().map_ok(|pull| pull.title),
-                                    ),
-                                }.or_else(|err| {
-                                    future::ok(format!("COULDN'T GET TITLE due to error {:?}", err))
-                                })
-                            }),
-                        }.map_ok({
+                        let respond_title_future = fetch_github_title(self.config, self.github_type, new_url.clone()).map_ok({
                             let old_url_option = (*old_url_option).clone();
-                            let new_url = new_url.url.clone();
+                            let new_url = new_url.clone();
                             move |title| {
                                 match old_url_option {
                                     None => respond_with(format!("OK, I'll post this discussion to {} ({}).", new_url, title)),
@@ -887,7 +927,41 @@ impl ChannelData {
     }
 }
 
-/// Return a pair where:
+/// Given a string that is the URL of a github issue or PR, return a
+/// future with the title.
+async fn fetch_github_title<S>(
+    config: &'static BotConfig,
+    github_type: GithubType,
+    s: S,
+) -> Result<String, ()>
+where
+    S: Into<String>,
+{
+    let new_url = GithubURL::from_string(s).expect("regexp failure");
+    let github = github_connection(config, github_type);
+    match github {
+        // When mocking the github connection for tests, pretend it's "TITLE".
+        // FIXME: Are there now better methods for this in futures 0.3?
+        None => Either::Left(future::ok::<String, ()>(String::from("TITLE"))),
+        Some(github) => Either::Right({
+            let repo = github.repo(new_url.owner, new_url.repo);
+            let num = new_url.number;
+            match new_url.which {
+                IssuesOrPull::Issues => {
+                    Either::Left(repo.issue(num).get().map_ok(|issue| issue.title))
+                }
+                IssuesOrPull::Pull => {
+                    Either::Right(repo.pulls().get(num).get().map_ok(|pull| pull.title))
+                }
+            }
+            .or_else(|err| future::ok(format!("COULDN'T GET TITLE due to error {:?}", err)))
+        }),
+    }
+    .await
+}
+
+/// extract_github_url can be run on any regular line of text received
+/// over IRC.  It returns a pair where:
 ///  * the first item is a nested option, the outer option representing
 ///    whether to replace the current github URL, and the inner option
 ///    being part of that URL (so that we can replace to no-url)
@@ -901,12 +975,10 @@ fn extract_github_url(
     in_topic: bool,
 ) -> (Option<Option<String>>, Option<String>) {
     lazy_static! {
-        static ref GITHUB_URL_WHOLE_RE: Regex =
-            Regex::new(r"^(?P<issueurl>https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(issues|pull)/(?P<number>[0-9]+))([#][^ ]*)?$")
-            .unwrap();
-        static ref GITHUB_URL_PART_RE: Regex =
-            Regex::new(r"https://github.com/(?P<repo>[^/]*/[^/]*)/(issues|pull)/(?P<number>[0-9]+)")
-            .unwrap();
+        static ref GITHUB_URL_PART_RE: Regex = Regex::new(
+            r"https://github.com/(?P<repo>[^/]*/[^/]*)/(issues|pull)/(?P<number>[0-9]+)"
+        )
+        .unwrap();
     }
     if let Some(ref maybe_url) = strip_one_ci_prefix(
         &message,
@@ -914,45 +986,8 @@ fn extract_github_url(
     ) {
         if maybe_url.to_lowercase() == "none" {
             (Some(None), None)
-        } else if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
-            let channel_config = config.channels.get(target);
-            if channel_config.is_none() {
-                (
-                    None,
-                    Some(String::from("I can't comment on that github issue because I don't have a configuration of allowed repositories for this channel.")),
-                )
-            } else {
-                let allowed_repos = &channel_config.unwrap().github_repos_allowed;
-                let is_allowed = allowed_repos.iter().any(|r| {
-                    let pos = match r.find('/') {
-                        Some(pos) => pos,
-                        None => return false,
-                    };
-                    let (owner, repo) = r.split_at(pos);
-                    let repo = &repo[1..];
-                    owner == &caps["owner"] && (repo == &caps["repo"] || repo == "*")
-                });
-                if is_allowed {
-                    (Some(Some(String::from(&caps["issueurl"]))), None)
-                } else {
-                    (
-                        None,
-                        Some(format!(
-                            "I can't comment on that github issue because it's not in \
-                             a repository I'm allowed to comment on, which are: {}.",
-                            allowed_repos.join(" "),
-                        )),
-                    )
-                }
-            }
         } else {
-            (
-                None,
-                Some(String::from(
-                    "I can't comment on that because it doesn't look like a \
-                     github issue to me.",
-                )),
-            )
+            check_github_url(maybe_url, config, target)
         }
     } else {
         if let Some(ref rematch) = GITHUB_URL_PART_RE.find(message) {
@@ -972,6 +1007,61 @@ fn extract_github_url(
         } else {
             (None, None)
         }
+    }
+}
+
+/// check_github_url is just like extract_github_url except that it only
+/// handles a URL argument.  It is used by extract_github_url and by the
+/// handling of the "take up" command.
+fn check_github_url(
+    maybe_url: &str,
+    config: &BotConfig,
+    target: &str,
+) -> (Option<Option<String>>, Option<String>) {
+    lazy_static! {
+        static ref GITHUB_URL_WHOLE_RE: Regex =
+            Regex::new(r"^(?P<issueurl>https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(issues|pull)/(?P<number>[0-9]+))([#][^ ]*)?$")
+            .unwrap();
+    }
+    if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
+        let channel_config = config.channels.get(target);
+        if channel_config.is_none() {
+            (
+                None,
+                Some(String::from("I can't comment on that github issue because I don't have a configuration of allowed repositories for this channel.")),
+            )
+        } else {
+            let allowed_repos = &channel_config.unwrap().github_repos_allowed;
+            let is_allowed = allowed_repos.iter().any(|r| {
+                let pos = match r.find('/') {
+                    Some(pos) => pos,
+                    None => return false,
+                };
+                let (owner, repo) = r.split_at(pos);
+                let repo = &repo[1..];
+                owner == &caps["owner"] && (repo == &caps["repo"] || repo == "*")
+            });
+            if is_allowed {
+                (Some(Some(String::from(&caps["issueurl"]))), None)
+            } else {
+                (
+                    None,
+                    Some(format!(
+                        "I can't comment on that github issue because it's not in \
+                         a repository I'm allowed to comment on, which are: {}.",
+                        allowed_repos.join(" "),
+                    )),
+                )
+            }
+        }
+    } else {
+        (
+            None,
+            Some(String::from(
+                "I can't comment on that because it doesn't look like a \
+                 github issue to me.",
+            )),
+        )
     }
 }
 

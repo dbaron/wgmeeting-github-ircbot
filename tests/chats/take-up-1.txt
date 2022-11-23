@@ -1,0 +1,54 @@
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.
+>PRIVMSG #meetingbottest :Topic: TITLE
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is a simple Test.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: another topic
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+!The Bot-Testing Working Group just discussed `TITLE`.
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;dbaron> This is a simple Test.<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
+>PRIVMSG #meetingbottest :Topic: TITLE
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Testing more.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, end topic\u{1}
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+!The Bot-Testing Working Group just discussed `TITLE`.
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;dbaron> Testing more.<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, take up issue https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :dbaron, I can\'t comment on that because it doesn\'t look like a github issue to me.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/1 now
+>PRIVMSG #meetingbottest :dbaron, I can\'t comment on that because it doesn\'t look like a github issue to me.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, take up https://github.com/dbaron/unknown-repo/issues/1
+>PRIVMSG #meetingbottest :dbaron, I can\'t comment on that github issue because it\'s not in a repository I\'m allowed to comment on, which are: dbaron/wgmeeting-github-ircbot dbaron/nonexistentrepo upsuper/*.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, take up none
+>PRIVMSG #meetingbottest :dbaron, I can\'t comment on that because it doesn\'t look like a github issue to me.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, take up 3
+>PRIVMSG #meetingbottest :dbaron, I can\'t comment on that because it doesn\'t look like a github issue to me.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
+>PRIVMSG #meetingbottest :Topic: TITLE
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Testing more.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION dbaron, ignoring request to take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/1 which is already the current github URL\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, end topic\u{1}
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+!The Bot-Testing Working Group just discussed `TITLE`.
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;dbaron> Testing more.<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
