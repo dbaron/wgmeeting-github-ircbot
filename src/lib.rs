@@ -337,12 +337,12 @@ fn handle_bot_command(
         }
 
         let strip_subtopic_result = strip_ci_prefix(take_up_argument, "subtopic ");
-        let (url_argument, is_subtopic) = if let Some(ref subtopic_argument) = strip_subtopic_result
-        {
-            (subtopic_argument, true)
-        } else {
-            (take_up_argument, false)
-        };
+        let (url_argument, topic_header) =
+            if let Some(ref subtopic_argument) = strip_subtopic_result {
+                (subtopic_argument, "Subtopic")
+            } else {
+                (take_up_argument, "Topic")
+            };
 
         match check_github_url(url_argument, config, response_target) {
             (Some(Some(ref new_url)), None) => {
@@ -381,12 +381,11 @@ fn handle_bot_command(
                             .as_mut()
                             .expect("just started a topic")
                             .github_url = Some(new_url);
-                        let header = if is_subtopic { "Subtopic" } else { "Topic" };
                         send_irc_line(
                             irc,
                             response_target,
                             false,
-                            format!("{}: {}", header, title),
+                            format!("{}: {}", topic_header, title),
                         );
                     }
                 });
