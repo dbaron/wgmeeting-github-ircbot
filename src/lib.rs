@@ -336,7 +336,15 @@ fn handle_bot_command(
             return;
         }
 
-        match check_github_url(take_up_argument, config, response_target) {
+        let strip_subtopic_result = strip_ci_prefix(take_up_argument, "subtopic ");
+        let (url_argument, is_subtopic) = if let Some(ref subtopic_argument) = strip_subtopic_result
+        {
+            (subtopic_argument, true)
+        } else {
+            (take_up_argument, false)
+        };
+
+        match check_github_url(url_argument, config, response_target) {
             (Some(Some(ref new_url)), None) => {
                 let this_channel_data_arc = irc_state.channel_data(response_target, config);
                 let mut this_channel_data = this_channel_data_arc.write().unwrap();
@@ -373,7 +381,13 @@ fn handle_bot_command(
                             .as_mut()
                             .expect("just started a topic")
                             .github_url = Some(new_url);
-                        send_irc_line(irc, response_target, false, format!("Topic: {}", title));
+                        let header = if is_subtopic { "Subtopic" } else { "Topic" };
+                        send_irc_line(
+                            irc,
+                            response_target,
+                            false,
+                            format!("{}: {}", header, title),
+                        );
                     }
                 });
                 let _ = tokio::spawn(respond_title_future);
@@ -413,9 +427,11 @@ fn handle_bot_command(
             );
             send_line(
                 None,
-                "  reboot - Make me leave the server and exit.  If properly configured, I will \
+                "  reboot    - Make me leave the server and exit.  If properly configured, I will \
                  then update myself and return.",
             );
+            send_line(None, "  take up [URL] - Start a new topic and print a \"Topic:\" line based on the title of the github issue/PR at URL");
+            send_line(None, "  take up subtopic [URL] - Start a new topic and print a \"Subtopic:\" line based on the title of the github issue/PR at URL");
         }
         "intro" => {
             send_line(
@@ -427,6 +443,10 @@ fn handle_bot_command(
                 None,
                 "I separate discussions by the \"Topic:\" lines, and I know what github issues to \
                  use only by lines of the form \"GitHub: <url> | none\".",
+            );
+            send_line(
+                None,
+                "You can also use the \"take up\" command if you want me to output the \"Topic:\" lines myself, based on the title of the github issue."
             );
             if response_target.starts_with('#') {
                 send_line(
