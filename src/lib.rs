@@ -821,21 +821,25 @@ impl ChannelData {
     // Returns the response that should be sent to the message over IRC.
     // FIXME: Move this to be a method on IRCState.
     fn add_line(&mut self, irc: &'static IrcClient, target: &String, line: ChannelLine) {
-        match line.is_action {
-            false => {
-                if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
-                    self.start_topic(irc, topic);
-                } else if let Some(ref subtopic) = strip_ci_prefix(&line.message, "subtopic:") {
-                    // Treat subtopic: the same as topic:, at least for now.
-                    self.start_topic(irc, subtopic);
-                }
+        if !line.is_action {
+            if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
+                self.start_topic(irc, topic);
+            } else if let Some(ref subtopic) = strip_ci_prefix(&line.message, "subtopic:") {
+                // Treat subtopic: the same as topic:, at least for now.
+                self.start_topic(irc, subtopic);
             }
-            true => {
-                if line.source == "trackbot" && line.message == "is ending a teleconference." {
-                    self.end_topic(irc);
-                }
-            }
-        };
+        }
+        if (line.is_action
+            && line.source == "trackbot"
+            && line.message == "is ending a teleconference.")
+            || (!line.is_action
+                && line.source == "Zakim"
+                && line
+                    .message
+                    .starts_with("As of this point the attendees have been"))
+        {
+            self.end_topic(irc);
+        }
         let respond_with = {
             let irc = irc.clone();
             let target = target.clone();
