@@ -159,7 +159,6 @@ pub fn process_irc_message(
                                     + this_channel_data.activity_timeout_duration
                             };
                             let timeout = tokio::time::sleep_until(deadline).map({
-                                let irc = irc.clone();
                                 let this_channel_data_cell = this_channel_data_cell.clone();
                                 move |_timeout| {
                                     {
@@ -865,7 +864,6 @@ impl ChannelData {
             self.end_topic(irc);
         }
         let respond_with = {
-            let irc = irc.clone();
             let target = target.clone();
             move |response| {
                 send_irc_line(&irc, &target, true, response);
