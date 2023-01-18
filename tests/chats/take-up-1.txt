@@ -1,6 +1,6 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
->PRIVMSG #meetingbottest :OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.
 >PRIVMSG #meetingbottest :Topic: TITLE
+>PRIVMSG #meetingbottest :OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is a simple Test.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Topic: another topic
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
@@ -13,8 +13,8 @@
 !!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
 >PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
->PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
 >PRIVMSG #meetingbottest :Topic: TITLE
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Testing more.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, end topic\u{1}
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
@@ -37,8 +37,8 @@
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, take up 3
 >PRIVMSG #meetingbottest :dbaron, I can\'t comment on that because it doesn\'t look like a github issue to me.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
->PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
 >PRIVMSG #meetingbottest :Topic: TITLE
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1.\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Testing more.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
 >PRIVMSG #meetingbottest :\u{1}ACTION dbaron, ignoring request to take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/1 which is already the current github URL\u{1}
@@ -52,8 +52,8 @@
 !
 !!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
 >PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
->PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/2.\u{1}
 >PRIVMSG #meetingbottest :Topic: TITLE
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/2.\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :Testing another issue.
 <:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/2\u{1}
 >PRIVMSG #meetingbottest :\u{1}ACTION dbaron, ignoring request to take up https://github.com/dbaron/wgmeeting-github-ircbot/issues/2 which is already the current github URL\u{1}
@@ -70,8 +70,8 @@
 !!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/2
 >PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/2\u{1}
 <:fantasai!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, take up subtopic https://github.com/dbaron/wgmeeting-github-ircbot/issues/45\u{1}
->PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/45.\u{1}
 >PRIVMSG #meetingbottest :Subtopic: TITLE
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/45.\u{1}
 <:fantasai!sid755@public.cloak PRIVMSG #meetingbottest :Testing subtopic.
 <:fantasai!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, end topic\u{1}
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/45
@@ -84,8 +84,8 @@
 !!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/45
 >PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/45\u{1}
 <:fantasai!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, subtopic https://github.com/dbaron/wgmeeting-github-ircbot/issues/72\u{1}
->PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/72.\u{1}
 >PRIVMSG #meetingbottest :Subtopic: TITLE
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/72.\u{1}
 <:fantasai!sid755@public.cloak PRIVMSG #meetingbottest :Testing shorter subtopic.
 <:fantasai!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, topic https://github.com/dbaron/wgmeeting-github-ircbot/issues/45\u{1}
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/72
@@ -97,8 +97,8 @@
 !
 !!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/72
 >PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/72\u{1}
->PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/45.\u{1}
 >PRIVMSG #meetingbottest :Topic: TITLE
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/45.\u{1}
 <:fantasai!sid755@public.cloak PRIVMSG #meetingbottest :Testing shorter topic.
 <:fantasai!sid755@public.cloak PRIVMSG #meetingbottest :\u{1}ACTION test-github-bot, end topic\u{1}
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/45

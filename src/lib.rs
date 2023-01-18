@@ -394,6 +394,12 @@ fn handle_bot_command(
                         send_irc_line(
                             irc,
                             response_target,
+                            false,
+                            format!("{}: {}", topic_header, title),
+                        );
+                        send_irc_line(
+                            irc,
+                            response_target,
                             response_is_action,
                             format!("OK, I'll post this discussion to {}.", new_url),
                         );
@@ -403,12 +409,6 @@ fn handle_bot_command(
                             .as_mut()
                             .expect("just started a topic")
                             .github_url = Some(new_url);
-                        send_irc_line(
-                            irc,
-                            response_target,
-                            false,
-                            format!("{}: {}", topic_header, title),
-                        );
                     }
                 });
                 let _ = tokio::spawn(respond_title_future);
