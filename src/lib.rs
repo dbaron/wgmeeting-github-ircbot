@@ -330,21 +330,43 @@ fn handle_bot_command(
         send_irc_line(irc, response_target, response_is_action, line_with_nick);
     };
 
-    if let Some(ref take_up_argument) = strip_ci_prefix(command, "take up ") {
+    let take_up_check_option = {
+        let (inner_command, had_take_up) =
+            if let Some(take_up_argument) = strip_ci_prefix(command, "take up ") {
+                (take_up_argument, true)
+            } else {
+                (String::from(command), false)
+            };
+
+        if let Some(subtopic_argument) = strip_ci_prefix(&inner_command, "subtopic ") {
+            Some((
+                subtopic_argument,
+                if had_take_up {
+                    "take up subtopic"
+                } else {
+                    "subtopic"
+                },
+                "Subtopic",
+            ))
+        } else if had_take_up {
+            Some((inner_command, "take up", "Topic"))
+        } else if let Some(topic_argument) = strip_ci_prefix(&inner_command, "topic ") {
+            Some((topic_argument, "topic", "Topic"))
+        } else {
+            None
+        }
+    };
+    if let Some(take_up_check_result) = take_up_check_option {
+        let (take_up_url, take_up_command, topic_header) = take_up_check_result;
         if !response_target.starts_with('#') {
-            send_line(response_username, "'take up' only works in a channel");
+            send_line(
+                response_username,
+                &("'".to_owned() + take_up_command + "' only works in a channel"),
+            );
             return;
         }
 
-        let strip_subtopic_result = strip_ci_prefix(take_up_argument, "subtopic ");
-        let (url_argument, topic_header) =
-            if let Some(ref subtopic_argument) = strip_subtopic_result {
-                (subtopic_argument, "Subtopic")
-            } else {
-                (take_up_argument, "Topic")
-            };
-
-        match check_github_url(url_argument, config, response_target) {
+        match check_github_url(&take_up_url, config, response_target) {
             (Some(Some(ref new_url)), None) => {
                 let this_channel_data_arc = irc_state.channel_data(response_target, config);
                 let mut this_channel_data = this_channel_data_arc.write().unwrap();
@@ -430,7 +452,9 @@ fn handle_bot_command(
                  then update myself and return.",
             );
             send_line(None, "  take up [URL] - Start a new topic and print a \"Topic:\" line based on the title of the github issue/PR at URL");
+            send_line(None, "  topic [URL]   - Start a new topic and print a \"Topic:\" line based on the title of the github issue/PR at URL");
             send_line(None, "  take up subtopic [URL] - Start a new topic and print a \"Subtopic:\" line based on the title of the github issue/PR at URL");
+            send_line(None, "  subtopic [URL]         - Start a new topic and print a \"Subtopic:\" line based on the title of the github issue/PR at URL");
         }
         "intro" => {
             send_line(
