@@ -20,7 +20,7 @@ entering the same topic leading to multiple short or empty comments.)
 scribe.perl conventions, but that's past minimum-viable-product, I
 think.   Though ScribeNick should probably be doable quickly...)
 
-# How to Use
+# How to use
 
 Begin a topic on IRC using `Topic:` or `Subtopic:`, and tell github-bot which issue to post to with `Github:`
 
