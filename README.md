@@ -20,16 +20,18 @@ entering the same topic leading to multiple short or empty comments.)
 scribe.perl conventions, but that's past minimum-viable-product, I
 think.   Though ScribeNick should probably be doable quickly...)
 
-# How to use
+# How to Use
 
-Begin a topic on IRC:
+Begin a topic on IRC using `Topic:` or `Subtopic:`, and tell github-bot which issue to post to with `Github:`
 
 ```
 Topic: [name of topic]
 github: [URL of a GitHub issue]
 ```
 
-The bot responds:
+Alternatively, you can use `github-bot, topic [URL]` or `github-bot, subtopic [URL]` to ask github-bot to extract the topic from the issue summary and post a `Topic:` or `Subtopic:` line for you.
+
+The bot responds to confirm the target issue:
 
 ```
 * github-bot OK, I'll post this discussion to [URL of the GitHub issue]
@@ -37,13 +39,19 @@ The bot responds:
 
 Discuss the topic on IRC.
 
-Add the resolutions:
+You can declare resolutions, which are exerpted and highlighted:
 
 ```
 RESOLVED: frob the snozwuzzle breadth-first
 ```
 
-Either begin a new topic:
+As are summaries:
+
+```
+SUMMARY: Jack defeated the Giant.
+```
+
+To end the transript, either begin a new topic:
 
 ```
 Topic: Semantics of the gribble
@@ -55,13 +63,14 @@ or explictly end the topic:
 github-bot, end topic
 ```
 
-At this point, the github-bot responds:
+At this point, the github-bot posts an IRC transcript to the issue and responds:
 
 ```
 * github-bot Successfully commented on [URL of the GitHub issue]
 ```
 
 The comments that github-bot adds are everything since the last Topic was begun, even if that was before the `github: [URL]` was entered.
+If multiple `github: [URL]` lines were entered during this topic, the last one wins.
 
 # Development notes
 
