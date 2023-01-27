@@ -86,14 +86,11 @@ pub fn process_irc_message(
         Command::PRIVMSG(ref target, ref msg) => {
             match message.source_nickname() {
                 None => {
-                    warn!(
-                        "PRIVMSG without a source! {}",
-                        format!("{}", message).trim()
-                    );
+                    warn!("PRIVMSG without a source! {}", format!("{message}").trim());
                 }
                 Some(ref source) => {
                     let source_ = String::from(*source);
-                    let line = if msg.starts_with("\x01ACTION ") && msg.ends_with("\x01") {
+                    let line = if msg.starts_with("\x01ACTION ") && msg.ends_with('\x01') {
                         ChannelLine {
                             source: source_,
                             is_action: true,
@@ -111,7 +108,7 @@ pub fn process_irc_message(
                         // An actual private message.
                         info!("[{}] {}", source, line);
                         handle_bot_command(
-                            &irc,
+                            irc,
                             config,
                             irc_state,
                             &line.message,
@@ -124,7 +121,7 @@ pub fn process_irc_message(
                         info!("[{}] {}", target, line);
                         match check_command_in_channel(mynick, &line.message) {
                             Some(ref command) => handle_bot_command(
-                                &irc,
+                                irc,
                                 config,
                                 irc_state,
                                 command,
@@ -133,10 +130,10 @@ pub fn process_irc_message(
                                 Some(source),
                             ),
                             None => {
-                                if !is_present_plus(&*line.message) {
+                                if !is_present_plus(&line.message) {
                                     let mut this_channel_data =
                                         irc_state.channel_data(target, config).write().unwrap();
-                                    this_channel_data.add_line(&irc, target, line);
+                                    this_channel_data.add_line(irc, target, line);
                                 }
                             }
                         }
@@ -147,7 +144,7 @@ pub fn process_irc_message(
                             irc: &'static IrcClient,
                             /* FIXME: Why do I need (as of tokio 0.2) to use Arc and RwLock when I'm using the basic scheduler? */
                             this_channel_data_cell: Arc<RwLock<ChannelData>>,
-                        ) -> () {
+                        ) {
                             let deadline = {
                                 let mut this_channel_data = this_channel_data_cell.write().unwrap();
 
@@ -159,7 +156,7 @@ pub fn process_irc_message(
                                     + this_channel_data.activity_timeout_duration
                             };
                             let timeout = tokio::time::sleep_until(deadline).map({
-                                let this_channel_data_cell = this_channel_data_cell.clone();
+                                let this_channel_data_cell = this_channel_data_cell;
                                 move |_timeout| {
                                     {
                                         let mut this_channel_data =
@@ -172,30 +169,31 @@ pub fn process_irc_message(
                                             >= this_channel_data.last_activity
                                                 + this_channel_data.activity_timeout_duration
                                         {
-                                            this_channel_data.end_topic(&irc);
+                                            this_channel_data.end_topic(irc);
                                             return;
                                         }
                                     }
                                     // We need to create a new timeout (outside the write
                                     // scope above, really an else on the chain inside).
-                                    create_timeout(&irc, this_channel_data_cell);
+                                    create_timeout(irc, this_channel_data_cell);
                                 }
                             });
                             let _ = tokio::spawn(timeout);
                         }
 
-                        if {
+                        let res = {
                             let this_channel_data = this_channel_data_cell.read().unwrap();
                             this_channel_data.current_topic.is_some()
                                 && !this_channel_data.have_activity_timeout
-                        } {
+                        };
+                        if res {
                             create_timeout(irc, this_channel_data_cell.clone());
                         }
                     } else {
                         warn!(
                             "UNEXPECTED TARGET {} in message {}",
                             target,
-                            format!("{}", message).trim()
+                            format!("{message}").trim()
                         );
                     }
                 }
@@ -241,7 +239,7 @@ fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
         return None;
     }
     let after_nick = &msg[mynick.len()..];
-    if !after_nick.starts_with(":") && !after_nick.starts_with(",") {
+    if !after_nick.starts_with(':') && !after_nick.starts_with(',') {
         return None;
     }
     let after_punct = &after_nick[1..];
@@ -268,7 +266,7 @@ fn send_irc_line(irc: &IrcClient, target: &str, is_action: bool, line: String) {
             let bytes = line.as_bytes();
             while bytes[byte_starting_char] & 0b_1100_0000_u8 == 0b_1000_0000_u8 {
                 // We found a UTF-8 continuation byte, so shorten.
-                byte_starting_char = byte_starting_char - 1;
+                byte_starting_char -= 1;
             }
             byte_starting_char
         };
@@ -278,7 +276,7 @@ fn send_irc_line(irc: &IrcClient, target: &str, is_action: bool, line: String) {
 
         let adjusted_slice = if is_action {
             info!("[{}] > * {}", target, slice);
-            format!("\x01ACTION {}\x01", slice)
+            format!("\x01ACTION {slice}\x01")
         } else {
             info!("[{}] > {}", target, slice);
             slice
@@ -349,10 +347,9 @@ fn handle_bot_command(
             ))
         } else if had_take_up {
             Some((inner_command, "take up", "Topic"))
-        } else if let Some(topic_argument) = strip_ci_prefix(&inner_command, "topic ") {
-            Some((topic_argument, "topic", "Topic"))
         } else {
-            None
+            strip_ci_prefix(&inner_command, "topic ")
+                .map(|topic_argument| (topic_argument, "topic", "Topic"))
         }
     };
     if let Some(take_up_check_result) = take_up_check_option {
@@ -371,7 +368,7 @@ fn handle_bot_command(
                 let mut this_channel_data = this_channel_data_arc.write().unwrap();
                 if let Some(ref topic) = this_channel_data.current_topic {
                     if Some(new_url) == topic.github_url.as_ref() {
-                        send_line(response_username, &*format!("ignoring request to take up {} which is already the current github URL", new_url));
+                        send_line(response_username, &*format!("ignoring request to take up {new_url} which is already the current github URL"));
                         return;
                     }
                 }
@@ -384,7 +381,7 @@ fn handle_bot_command(
                 )
                 .map_ok({
                     let new_url = new_url.clone();
-                    let this_channel_data_arc = Arc::clone(&this_channel_data_arc);
+                    let this_channel_data_arc = Arc::clone(this_channel_data_arc);
                     let response_target = String::from(response_target);
                     move |title| {
                         let mut this_channel_data = this_channel_data_arc.write().unwrap();
@@ -394,13 +391,13 @@ fn handle_bot_command(
                             irc,
                             response_target,
                             false,
-                            format!("{}: {}", topic_header, title),
+                            format!("{topic_header}: {title}"),
                         );
                         send_irc_line(
                             irc,
                             response_target,
                             response_is_action,
-                            format!("OK, I'll post this discussion to {}.", new_url),
+                            format!("OK, I'll post this discussion to {new_url}."),
                         );
                         this_channel_data.start_topic(irc, &title);
                         this_channel_data
@@ -422,7 +419,7 @@ fn handle_bot_command(
     }
 
     // Remove a question mark at the end of the command if it exists
-    let command_without_question_mark = if command.ends_with("?") {
+    let command_without_question_mark = if command.ends_with('?') {
         &command[..command.len() - 1]
     } else {
         command
@@ -473,7 +470,7 @@ fn handle_bot_command(
             if response_target.starts_with('#') {
                 send_line(
                     None,
-                    &*format!(
+                    &format!(
                         "In this channel, I'm only allowed to comment on issues in the repositories: {:?}.",
                         config.channels[response_target].github_repos_allowed,
                     ),
@@ -482,7 +479,7 @@ fn handle_bot_command(
             let owners = config.owners.join(" ");
             send_line(
                 None,
-                &*format!(
+                &format!(
                     "My source code is at {} and I'm run by {}.",
                     config.source, owners,
                 ),
@@ -494,7 +491,7 @@ fn handle_bot_command(
                 &*format!(
                     "This is {}, which is probably in the repository at \
                      https://github.com/dbaron/wgmeeting-github-ircbot/",
-                    &*code_description()
+                    code_description()
                 ),
             );
             send_line(None, "I currently have data for the following channels:");
@@ -505,7 +502,7 @@ fn handle_bot_command(
                 if let Some(ref topic) = channel_data.current_topic {
                     send_line(
                         None,
-                        &*format!(
+                        &format!(
                             "  {} ({} lines buffered on \"{}\")",
                             channel,
                             topic.lines.len(),
@@ -515,11 +512,11 @@ fn handle_bot_command(
                     match topic.github_url {
                         None => send_line(None, "    no GitHub URL to comment on"),
                         Some(ref github_url) => {
-                            send_line(None, &*format!("    will comment on {}", github_url))
+                            send_line(None, &*format!("    will comment on {github_url}"))
                         }
                     };
                 } else {
-                    send_line(None, &*format!("  {} (no topic data buffered)", channel));
+                    send_line(None, &*format!("  {channel} (no topic data buffered)"));
                 }
             }
         }
@@ -571,7 +568,7 @@ fn handle_bot_command(
                 // quit from the server, with a message
                 irc.send(Command::QUIT(Some(format!(
                     "{}, rebooting at request of {}.",
-                    &*code_description(),
+                    code_description(),
                     response_username.unwrap()
                 ))))
                 .unwrap();
@@ -588,7 +585,7 @@ fn handle_bot_command(
                 channels_with_topics.sort();
                 send_line(
                     response_username,
-                    &*format!(
+                    &format!(
                         "Sorry, I can't reboot right now because I have buffered topics in{}.",
                         channels_with_topics
                             .iter()
@@ -690,7 +687,8 @@ impl TopicData {
     }
 
     fn should_comment(&self) -> bool {
-        self.github_url.is_some() && (self.resolutions.len() != 0 || !self.publish_resolutions_only)
+        self.github_url.is_some()
+            && (!self.resolutions.is_empty() || !self.publish_resolutions_only)
     }
 }
 
@@ -726,10 +724,7 @@ fn escape_as_code_span(s: &str) -> String {
     } else {
         ""
     };
-    format!(
-        "{}{}{}{}{}",
-        tick_string, space_first, s, space_last, tick_string
-    )
+    format!("{tick_string}{space_first}{s}{space_last}{tick_string}")
 }
 
 fn escape_for_html_block(s: &str) -> String {
@@ -745,7 +740,7 @@ fn escape_for_html_block(s: &str) -> String {
     }
     let no_issue_links = ISSUE_RE.replace_all(s, "${space}#\u{feff}${number}");
 
-    no_issue_links.replace("&", "&amp;").replace("<", "&lt;")
+    no_issue_links.replace('&', "&amp;").replace('<', "&lt;")
 }
 
 impl fmt::Display for TopicData {
@@ -756,18 +751,18 @@ impl fmt::Display for TopicData {
             f,
             "The {} just discussed {}",
             self.group,
-            if self.topic == "" {
+            if self.topic.is_empty() {
                 String::from("this issue")
             } else {
-                escape_as_code_span(&*self.topic)
+                escape_as_code_span(&self.topic)
             }
         )?;
-        if self.resolutions.len() == 0 {
-            write!(f, ".\n")?;
+        if self.resolutions.is_empty() {
+            writeln!(f, ".")?;
         } else {
             write!(f, ", and agreed to the following:\n\n")?;
             for resolution in &self.resolutions {
-                write!(f, "* {}\n", escape_as_code_span(&*resolution))?;
+                writeln!(f, "* {}", escape_as_code_span(resolution))?;
             }
         }
 
@@ -778,9 +773,9 @@ impl fmt::Display for TopicData {
                  discussion</summary>\n"
             )?;
             for line in &self.lines {
-                write!(f, "{}<br>\n", escape_for_html_block(&*format!("{}", line)))?;
+                writeln!(f, "{}<br>", escape_for_html_block(&*format!("{line}")))?;
             }
-            write!(f, "</details>\n")?;
+            writeln!(f, "</details>")?;
         }
         Ok(())
     }
@@ -815,7 +810,7 @@ where
     T: Iterator<Item = &'a &'a str>,
 {
     prefixes
-        .filter_map(|prefix| strip_ci_prefix(s, &prefix))
+        .filter_map(|prefix| strip_ci_prefix(s, prefix))
         .next()
 }
 
@@ -866,7 +861,7 @@ impl ChannelData {
         let respond_with = {
             let target = target.clone();
             move |response| {
-                send_irc_line(&irc, &target, true, response);
+                send_irc_line(irc, &target, true, response);
             }
         };
         match self.current_topic {
@@ -900,14 +895,14 @@ impl ChannelData {
                         respond_with(String::from("OK, I won't post this discussion to GitHub."));
                     }
                     (Some(new_url), old_url) if *old_url == *new_url => (),
-                    (Some(&Some(ref new_url)), ref old_url_option) => {
+                    (Some(Some(new_url)), old_url_option) => {
                         let respond_title_future = fetch_github_title(self.config, self.github_type, new_url.clone()).map_ok({
-                            let old_url_option = (*old_url_option).clone();
+                            let old_url_option = old_url_option.clone();
                             let new_url = new_url.clone();
                             move |title| {
                                 match old_url_option {
-                                    None => respond_with(format!("OK, I'll post this discussion to {} ({}).", new_url, title)),
-                                    Some(old_url) => respond_with(format!("OK, I'll post this discussion to {} ({}) instead of {} like you said before.", new_url, title, old_url)),
+                                    None => respond_with(format!("OK, I'll post this discussion to {new_url} ({title}).")),
+                                    Some(old_url) => respond_with(format!("OK, I'll post this discussion to {new_url} ({title}) instead of {old_url} like you said before.")),
                                 }
                             }
                         });
@@ -961,7 +956,7 @@ impl ChannelData {
             if topic.should_comment() {
                 let task = GithubCommentTask::new(
                     irc,
-                    &*self.channel_name,
+                    &self.channel_name,
                     topic,
                     self.config,
                     self.github_type,
@@ -999,7 +994,7 @@ where
                     Either::Right(repo.pulls().get(num).get().map_ok(|pull| pull.title))
                 }
             }
-            .or_else(|err| future::ok(format!("COULDN'T GET TITLE due to error {:?}", err)))
+            .or_else(|err| future::ok(format!("COULDN'T GET TITLE due to error {err:?}")))
         }),
     }
     .await
@@ -1026,7 +1021,7 @@ fn extract_github_url(
         .unwrap();
     }
     if let Some(ref maybe_url) = strip_one_ci_prefix(
-        &message,
+        message,
         ["github:", "github topic:", "github issue:"].iter(),
     ) {
         if maybe_url.to_lowercase() == "none" {
@@ -1034,24 +1029,22 @@ fn extract_github_url(
         } else {
             check_github_url(maybe_url, config, target)
         }
-    } else {
-        if let Some(ref rematch) = GITHUB_URL_PART_RE.find(message) {
-            if &Some(String::from(rematch.as_str())) == current_github_url || !in_topic {
-                (None, None)
-            } else {
-                (
-                    None,
-                    Some(String::from(
-                        "Because I don't want to spam github issues unnecessarily, \
-                         I won't comment in that github issue unless you write \
-                         \"Github: <issue-url> | none\" (or \"Github issue: \
-                         ...\"/\"Github topic: ...\").",
-                    )),
-                )
-            }
-        } else {
+    } else if let Some(ref rematch) = GITHUB_URL_PART_RE.find(message) {
+        if &Some(String::from(rematch.as_str())) == current_github_url || !in_topic {
             (None, None)
+        } else {
+            (
+                None,
+                Some(String::from(
+                    "Because I don't want to spam github issues unnecessarily, \
+                     I won't comment in that github issue unless you write \
+                     \"Github: <issue-url> | none\" (or \"Github issue: \
+                     ...\"/\"Github topic: ...\").",
+                )),
+            )
         }
+    } else {
+        (None, None)
     }
 }
 
@@ -1135,20 +1128,17 @@ impl GithubURL {
         }
 
         let s = s.into();
-        let mut result = match GITHUB_URL_RE.captures(&s) {
-            None => None,
-            Some(ref caps) => Some(GithubURL {
-                url: String::from(""),
-                owner: String::from(&caps["owner"]),
-                repo: String::from(&caps["repo"]),
-                which: match &(caps["type"]) {
-                    "issues" => IssuesOrPull::Issues,
-                    "pull" => IssuesOrPull::Pull,
-                    _ => panic!("the regexp should not have allowed this"),
-                },
-                number: caps["number"].parse::<u64>().unwrap(),
-            }),
-        };
+        let mut result = GITHUB_URL_RE.captures(&s).as_ref().map(|caps| GithubURL {
+            url: String::from(""),
+            owner: String::from(&caps["owner"]),
+            repo: String::from(&caps["repo"]),
+            which: match &(caps["type"]) {
+                "issues" => IssuesOrPull::Issues,
+                "pull" => IssuesOrPull::Pull,
+                _ => panic!("the regexp should not have allowed this"),
+            },
+            number: caps["number"].parse::<u64>().unwrap(),
+        });
         if let Some(ref mut result) = result {
             result.url = s;
         }
@@ -1209,7 +1199,7 @@ impl GithubCommentTask {
                     let irc = self.irc;
                     let target = self.response_target.clone();
                     move |response: String| {
-                        send_irc_line(&irc, &*target, true, response);
+                        send_irc_line(irc, &target, true, response);
                     }
                 };
                 match self.github {
@@ -1238,11 +1228,11 @@ impl GithubCommentTask {
                         };
 
                         let _ = tokio::spawn(labels_future.then({
-                            let github_url = github_url.url.clone();
+                            let github_url = github_url.url;
                             let remove_from_agenda = self.data.remove_from_agenda;
                             move |labels_result| {
                             match labels_result {
-                                Err(err) => Either::Left(future::ok::<String, ()>(format!("UNABLE TO RETRIEVE LABELS ON {} due to error: {:?}", github_url, err))),
+                                Err(err) => Either::Left(future::ok::<String, ()>(format!("UNABLE TO RETRIEVE LABELS ON {github_url} due to error: {err:?}"))),
                                 Ok(labels_vec) => {
 
                                     let commentopts = &CommentOptions { body: comment_text };
@@ -1250,10 +1240,9 @@ impl GithubCommentTask {
                                         let github_url = github_url.clone();
                                         move |result| {
                                             ok::<String, ()>(match result {
-                                                Ok(_) => format!("Successfully commented on {}", github_url),
+                                                Ok(_) => format!("Successfully commented on {github_url}"),
                                                 Err(err) => format!(
-                                                    "UNABLE TO COMMENT on {} due to error: {:?}",
-                                                    github_url, err
+                                                    "UNABLE TO COMMENT on {github_url} due to error: {err:?}"
                                                 ),
                                             })
                                         }
@@ -1267,15 +1256,14 @@ impl GithubCommentTask {
                                         for label_obj in labels_vec {
                                             let label = label_obj.name;
                                             if label.starts_with("Agenda+") {
-                                                let success_str = format!(" and removed the \"{}\" label", label);
+                                                let success_str = format!(" and removed the \"{label}\" label");
                                                 label_tasks.push(labels.remove(&label).then({
                                                     let github_url = github_url.clone();
                                                     move |result| {
                                                         ok(match result {
                                                             Ok(_) => success_str,
                                                             Err(err) => format!(
-                                                                " UNABLE TO REMOVE LABEL {} on {} due to error: {:?}",
-                                                                label, github_url, err
+                                                                " UNABLE TO REMOVE LABEL {label} on {github_url} due to error: {err:?}"
                                                             ),
                                                         })
                                                     }
@@ -1302,7 +1290,7 @@ impl GithubCommentTask {
                         // Mock the github comments by sending them over IRC
                         // to a fake user called github-comments.
                         let send_github_comment_line = |line: &str| {
-                            send_irc_line(&self.irc, "github-comments", false, String::from(line))
+                            send_irc_line(self.irc, "github-comments", false, String::from(line))
                         };
                         send_github_comment_line(
                             format!("!BEGIN GITHUB COMMENT IN {}", github_url.url).as_str(),

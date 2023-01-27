@@ -46,8 +46,8 @@ async fn test_chats() -> Result<(), failure::Error> {
     }
     assert!(
         fail_count == 0,
-        "{} chat test failure(s), see above",
-        fail_count
+        "{}",
+        "{fail_count} chat test failure(s), see above"
     );
 
     Ok(())
@@ -66,7 +66,7 @@ async fn test_one_chat(path: &Path) -> Result<bool, failure::Error> {
         let _size = File::open(path)?.read_to_end(&mut file_bytes)?;
         file_bytes
     }
-    .split(|byte| *byte == '\n' as u8)
+    .split(|byte| *byte == b'\n')
     .map(|arr| arr.to_vec())
     .collect::<Vec<Vec<u8>>>();
 
@@ -76,7 +76,7 @@ async fn test_one_chat(path: &Path) -> Result<bool, failure::Error> {
     let bot = run_irc_bot(&is_finished);
 
     let (actual_lines, bot_result) = future::join(server, bot).await;
-    let _ = bot_result?;
+    bot_result?;
     let actual_lines = actual_lines?;
 
     let actual_str = str::from_utf8(actual_lines.as_slice())?;
@@ -87,9 +87,9 @@ async fn test_one_chat(path: &Path) -> Result<bool, failure::Error> {
     if !test_pass {
         for d in diff::lines(expected_str, actual_str) {
             match d {
-                diff::Result::Left(actual) => println!("-{}", actual),
-                diff::Result::Both(actual, _) => println!(" {}", actual),
-                diff::Result::Right(expected) => println!("+{}", expected),
+                diff::Result::Left(actual) => println!("-{actual}"),
+                diff::Result::Both(actual, _) => println!(" {actual}"),
+                diff::Result::Right(expected) => println!("+{expected}"),
             }
         }
     }
@@ -134,7 +134,7 @@ async fn mock_irc_server(
         wait_deadline: Instant::now() + WAIT_DURATION,
     });
 
-    let irc_server_addr = format!("{}:{}", MOCK_SERVER_HOST, MOCK_SERVER_PORT);
+    let irc_server_addr = format!("{MOCK_SERVER_HOST}:{MOCK_SERVER_PORT}");
     let irc_server_listener = TcpListener::bind(&irc_server_addr).await?;
     let (mut tcp_stream, _socket_addr) = irc_server_listener.accept().await?;
     tcp_stream.set_nodelay(true)?;
@@ -154,7 +154,7 @@ async fn mock_irc_server(
 
             {
                 let mut wait_lines_data = wait_lines_data.borrow_mut();
-                wait_lines_data.expect_lines = wait_lines_data.expect_lines - 1;
+                wait_lines_data.expect_lines -= 1;
             }
 
             {
@@ -180,7 +180,7 @@ async fn mock_irc_server(
                 // This is a line we should expect to recieve from the bot.  Note this in
                 // |wait_lines_data|, which |reader_future| will use to adjust its timing.
                 let mut wait_lines_data = wait_lines_data.borrow_mut();
-                wait_lines_data.expect_lines = wait_lines_data.expect_lines + 1;
+                wait_lines_data.expect_lines += 1;
                 wait_lines_data.wait_deadline = Instant::now() + WAIT_DURATION;
             }
 
@@ -201,11 +201,11 @@ async fn mock_irc_server(
 
             {
                 let mut actual_lines = actual_lines.borrow_mut();
-                actual_lines.extend_from_slice(&line);
+                actual_lines.extend_from_slice(line);
                 actual_lines.append(&mut "\r\n".bytes().collect());
             }
 
-            let _ = writer.write_all(line_str.as_bytes()).await?;
+            writer.write_all(line_str.as_bytes()).await?;
         }
 
         tokio::time::sleep(SERVER_SHUTDOWN_DURATION).await;
@@ -230,16 +230,16 @@ async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<(), failure::Error> {
     let irc_config = IrcConfig {
         use_mock_connection: false,
         owners: vec![format!("dbaron")],
-        nickname: Some(format!("test-github-bot")),
+        nickname: Some("test-github-bot".to_string()),
         alt_nicks: vec![format!("test-github-bot-"), format!("test-github-bot--")],
-        username: Some(format!("dbaron-gh-bot")),
-        realname: Some(format!("Bot to add meeting minutes to github issues.")),
-        server: Some(format!("{}", MOCK_SERVER_HOST)),
+        username: Some("dbaron-gh-bot".to_string()),
+        realname: Some("Bot to add meeting minutes to github issues.".to_string()),
+        server: Some(MOCK_SERVER_HOST.to_string()),
         port: Some(MOCK_SERVER_PORT),
         use_tls: Some(false),
-        encoding: Some(format!("UTF-8")),
+        encoding: Some("UTF-8".to_string()),
         channels: vec![format!("#meetingbottest"), format!("#testchannel2")],
-        user_info: Some(format!("Bot to add meeting minutes to github issues.")),
+        user_info: Some("Bot to add meeting minutes to github issues.".to_string()),
 
         // In testing mode, we send the github comments as IRC messages, so we
         // need to be able to handle more substantial bursts of messages
@@ -252,8 +252,8 @@ async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<(), failure::Error> {
         static ref BOT_CONFIG: BotConfig = BotConfig {
             source: "https://github.com/dbaron/wgmeeting-github-ircbot".to_string(),
             channels: vec![
-                (format!("#meetingbottest"), ChannelConfig {
-                    group: format!("Bot-Testing Working Group"),
+                ("#meetingbottest".to_string(), ChannelConfig {
+                    group: "Bot-Testing Working Group".to_string(),
                     github_repos_allowed: vec![
                         "dbaron/wgmeeting-github-ircbot".to_string(),
                         "dbaron/nonexistentrepo".to_string(),
@@ -261,15 +261,15 @@ async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<(), failure::Error> {
                     ],
                     publish_resolutions_only: false,
                 }),
-                (format!("#testchannel2"), ChannelConfig {
-                    group: format!("Second Bot-Testing Working Group"),
+                ("#testchannel2".to_string(), ChannelConfig {
+                    group: "Second Bot-Testing Working Group".to_string(),
                     github_repos_allowed: vec![
                         "dbaron/wgmeeting-github-ircbot".to_string(),
                     ],
                     publish_resolutions_only: false,
                 }),
-                (format!("#testresolutionsonly"), ChannelConfig {
-                    group: format!("Third Bot-Testing Working Group"),
+                ("#testresolutionsonly".to_string(), ChannelConfig {
+                    group: "Third Bot-Testing Working Group".to_string(),
                     github_repos_allowed: vec![
                         "dbaron/wgmeeting-github-ircbot".to_string(),
                     ],
@@ -332,7 +332,7 @@ fn chat_lines_to_expected_lines(path: &Path, chat_file_lines: &Vec<Vec<u8>>) -> 
                 expected_lines.extend(
                     str::from_utf8(line)
                         .unwrap()
-                        .replace("[[CODE_DESCRIPTION]]", &*code_description())
+                        .replace("[[CODE_DESCRIPTION]]", code_description())
                         .bytes(),
                 );
                 expected_lines.append(&mut "\r\n".bytes().collect());

@@ -10,10 +10,10 @@ fn main() {
     // binary using include_str!() in src/main.rs.
     let output_dir = env::var("OUT_DIR").unwrap();
     let output_file_path = Path::new(&output_dir).join("git-hash");
-    let mut output_file = File::create(&output_file_path).unwrap();
+    let mut output_file = File::create(output_file_path).unwrap();
 
     let git_command = Command::new("git")
-        .args(&["rev-parse", "HEAD"])
+        .args(["rev-parse", "HEAD"])
         .output()
         .unwrap();
 
