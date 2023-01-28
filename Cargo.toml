@@ -3,7 +3,7 @@ name = "wgmeeting_github_ircbot"
 version = "0.4.8"
 authors = ["L. David Baron <dbaron@dbaron.org>"]
 build = "build.rs"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 failure = "0.1"
