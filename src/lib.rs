@@ -234,7 +234,7 @@ fn is_present_plus(line: &str) -> bool {
 
 // Take a message in the channel, and see if it was a message sent to
 // this bot.
-fn check_command_in_channel(mynick: &str, msg: &String) -> Option<String> {
+fn check_command_in_channel(mynick: &str, msg: &str) -> Option<String> {
     if !msg.starts_with(mynick) {
         return None;
     }
@@ -368,7 +368,7 @@ fn handle_bot_command(
                 let mut this_channel_data = this_channel_data_arc.write().unwrap();
                 if let Some(ref topic) = this_channel_data.current_topic {
                     if Some(new_url) == topic.github_url.as_ref() {
-                        send_line(response_username, &*format!("ignoring request to take up {new_url} which is already the current github URL"));
+                        send_line(response_username, &format!("ignoring request to take up {new_url} which is already the current github URL"));
                         return;
                     }
                 }
@@ -419,10 +419,9 @@ fn handle_bot_command(
     }
 
     // Remove a question mark at the end of the command if it exists
-    let command_without_question_mark = if command.ends_with('?') {
-        &command[..command.len() - 1]
-    } else {
-        command
+    let command_without_question_mark = match command.strip_suffix('?') {
+        Some(stripped) => stripped,
+        None => command,
     };
 
     match command_without_question_mark {
@@ -488,7 +487,7 @@ fn handle_bot_command(
         "status" => {
             send_line(
                 response_username,
-                &*format!(
+                &format!(
                     "This is {}, which is probably in the repository at \
                      https://github.com/dbaron/wgmeeting-github-ircbot/",
                     code_description()
@@ -512,11 +511,11 @@ fn handle_bot_command(
                     match topic.github_url {
                         None => send_line(None, "    no GitHub URL to comment on"),
                         Some(ref github_url) => {
-                            send_line(None, &*format!("    will comment on {github_url}"))
+                            send_line(None, &format!("    will comment on {github_url}"))
                         }
                     };
                 } else {
-                    send_line(None, &*format!("  {channel} (no topic data buffered)"));
+                    send_line(None, &format!("  {channel} (no topic data buffered)"));
                 }
             }
         }
@@ -773,7 +772,7 @@ impl fmt::Display for TopicData {
                  discussion</summary>\n"
             )?;
             for line in &self.lines {
-                writeln!(f, "{}<br>", escape_for_html_block(&*format!("{line}")))?;
+                writeln!(f, "{}<br>", escape_for_html_block(&format!("{line}")))?;
             }
             writeln!(f, "</details>")?;
         }
@@ -838,7 +837,7 @@ impl ChannelData {
 
     // Returns the response that should be sent to the message over IRC.
     // FIXME: Move this to be a method on IRCState.
-    fn add_line(&mut self, irc: &'static IrcClient, target: &String, line: ChannelLine) {
+    fn add_line(&mut self, irc: &'static IrcClient, target: &str, line: ChannelLine) {
         if !line.is_action {
             if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
                 self.start_topic(irc, topic);
@@ -859,7 +858,7 @@ impl ChannelData {
             self.end_topic(irc);
         }
         let respond_with = {
-            let target = target.clone();
+            let target = target.to_owned();
             move |response| {
                 send_irc_line(irc, &target, true, response);
             }
@@ -1010,7 +1009,7 @@ where
 fn extract_github_url(
     message: &str,
     config: &BotConfig,
-    target: &String,
+    target: &str,
     current_github_url: &Option<String>,
     in_topic: bool,
 ) -> (Option<Option<String>>, Option<String>) {
