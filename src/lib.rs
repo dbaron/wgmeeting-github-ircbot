@@ -917,8 +917,9 @@ impl ChannelData {
                     let is_resolution = line.message.starts_with("RESOLUTION")
                         || line.message.starts_with("RESOLVED");
                     let is_summary = line.message.starts_with("SUMMARY");
+                    let is_action = line.message.starts_with("ACTION");
 
-                    if is_resolution || is_summary {
+                    if is_resolution || is_summary || is_action {
                         data.resolutions.push(line.message.clone());
                     }
 

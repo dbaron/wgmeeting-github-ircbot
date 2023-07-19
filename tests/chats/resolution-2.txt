@@ -1,0 +1,20 @@
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :topic: gathering data
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :GitHub: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1 (TITLE).\u{1}
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :fantasai: we need to get more data
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :ACTION dbaron to gather data on whether changing the property would break sites
+<:dael!sid801@public.cloak PRIVMSG #meetingbottest :Topic: values 3
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+!The Bot-Testing Working Group just discussed `gathering data`, and agreed to the following:
+!
+!* `ACTION dbaron to gather data on whether changing the property would break sites`
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;dael> topic: gathering data<br>
+!&lt;dael> GitHub: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1<br>
+!&lt;dael> fantasai: we need to get more data<br>
+!&lt;dael> ACTION dbaron to gather data on whether changing the property would break sites<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
