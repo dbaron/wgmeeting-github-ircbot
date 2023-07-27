@@ -126,6 +126,13 @@ github_repos_allowed = [
     "w3c/html-aam",
 ]
 
+[channels."#aria-at"]
+group = "ARIA-AT Community Group"
+github_repos_allowed = [
+    "w3c/aria-at",
+    "w3c/aria-at-app",
+]
+
 [channels."#svg"]
 group = "SVG Working Group"
 github_repos_allowed = [
