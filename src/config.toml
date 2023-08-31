@@ -203,6 +203,7 @@ github_repos_allowed = [
 group = "Open UI Community Group"
 github_repos_allowed = [
     "openui/open-ui",
+    "whatwg/html",
 ]
 
 [channels."#editing"]
