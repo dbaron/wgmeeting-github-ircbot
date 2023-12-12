@@ -18,6 +18,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::str;
 use wgmeeting_github_ircbot::*;
 
 fn read_config() -> (IrcConfig, BotConfig) {
@@ -42,7 +43,9 @@ fn read_config() -> (IrcConfig, BotConfig) {
         channels: HashMap<String, ChannelConfig>,
     }
     let file = fs::read(config_file).expect("couldn't load configuration file");
-    let mut config: Config = toml::from_slice(&file).expect("couldn't parse configuration file");
+    let file_contents = str::from_utf8(&file).expect("configuration file not UTF-8");
+    let mut config: Config =
+        toml::from_str(file_contents).expect("couldn't parse configuration file");
     config.bot.github_access_token =
         fs::read_to_string(token_file).expect("couldn't read github access token file");
     config.irc.channels = config.channels.keys().cloned().collect();
