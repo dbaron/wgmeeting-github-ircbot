@@ -12,6 +12,7 @@
 //! input beginning with <, expected IRC output beginning with >, and expected
 //! github output beginning with !.
 
+use anyhow::Result;
 use futures::prelude::*;
 use futures::task::Poll;
 use irc::client::prelude::{Client as IrcClient, Config as IrcConfig};
@@ -31,7 +32,7 @@ const MOCK_SERVER_HOST: &str = "127.0.0.1";
 const MOCK_SERVER_PORT: u16 = 43210;
 
 #[tokio::test(flavor = "current_thread")]
-async fn test_chats() -> Result<(), failure::Error> {
+async fn test_chats() -> Result<()> {
     env_logger::init();
 
     let chats_dir = Path::new(file!()).parent().unwrap().join("chats");
@@ -53,7 +54,7 @@ async fn test_chats() -> Result<(), failure::Error> {
     Ok(())
 }
 
-async fn test_one_chat(path: &Path) -> Result<bool, failure::Error> {
+async fn test_one_chat(path: &Path) -> Result<bool> {
     info!("Testing {:?}", path);
 
     // We're given the path to a file (the chat file) that represents a dialog between the bot
@@ -103,7 +104,7 @@ async fn test_one_chat(path: &Path) -> Result<bool, failure::Error> {
 async fn mock_irc_server(
     chat_file_lines: &Vec<Vec<u8>>,
     is_finished: &Cell<bool>,
-) -> Result<Vec<u8>, failure::Error> {
+) -> Result<Vec<u8>> {
     let actual_lines = RefCell::new(Vec::<u8>::new());
 
     struct WaitLinesData {
@@ -170,7 +171,7 @@ async fn mock_irc_server(
             }
         }
 
-        Ok::<(), failure::Error>(())
+        Ok::<(), std::io::Error>(())
     };
 
     let writer_future = async {
@@ -215,7 +216,7 @@ async fn mock_irc_server(
         // This seems (to my surprise) to be good enough to make the reader terminate as well.
         writer.shutdown().await?;
 
-        Ok::<(), failure::Error>(())
+        Ok::<(), anyhow::Error>(())
     };
 
     let (reader_result, writer_result) = future::join(reader_future, writer_future).await;
@@ -226,7 +227,7 @@ async fn mock_irc_server(
 }
 
 /// Run the IRC bot side of the chat test (i.e., the code we're testing).
-async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<(), failure::Error> {
+async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<()> {
     let irc_config = IrcConfig {
         use_mock_connection: false,
         owners: vec![format!("dbaron")],

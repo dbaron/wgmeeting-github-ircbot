@@ -12,6 +12,7 @@
 //! combined with "Github topic:" or "Github issue:" lines that give the
 //! github issue to comment in.
 
+use anyhow::Result;
 use futures::prelude::*;
 use irc::client::prelude::{Client as IrcClient, Config as IrcConfig};
 use serde::Deserialize;
@@ -54,7 +55,7 @@ fn read_config() -> (IrcConfig, BotConfig) {
 }
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<()> {
     env_logger::init();
     let (irc_config, bot_config) = read_config();
     let bot_config: &'static _ = Box::leak(Box::new(bot_config));

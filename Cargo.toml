@@ -6,7 +6,6 @@ build = "build.rs"
 edition = "2021"
 
 [dependencies]
-failure = "0.1"
 futures = "0.3"
 log = "0.4"
 env_logger = "0.10"
@@ -20,3 +19,4 @@ serde = "1.0"
 serde_derive = "1.0"
 diff = "0.1"
 toml = "0.8"
+anyhow = "1.0"
