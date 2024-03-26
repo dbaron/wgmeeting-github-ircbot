@@ -8,8 +8,7 @@ edition = "2021"
 [dependencies]
 futures = "0.3"
 log = "0.4"
-# TODO: update env_logger to 0.11
-env_logger = "0.10"
+env_logger = "0.11"
 # TODO: update irc to 1.0
 irc = { version = "0.15", default-features = false, features = ["tls-rust", "serde"] }
 lazy_static = "1.4"
