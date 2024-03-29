@@ -14,8 +14,7 @@ irc = { version = "0.15", default-features = false, features = ["tls-rust", "ser
 lazy_static = "1.4"
 regex = "1.10"
 tokio = { version = "1.35", features = ["rt", "macros", "time", "io-util", "net"] }
-# hubcaps = { version = "0.6.2", default-features = false, features = [ "rustls-tls" ] }
-hubcaps = { git = "https://github.com/softprops/hubcaps", branch = "master", default-features = false, features = [ "rustls-tls" ], version="0.6.2" }
+octorust = "0.7.0"
 serde = "1.0"
 serde_derive = "1.0"
 diff = "0.1"

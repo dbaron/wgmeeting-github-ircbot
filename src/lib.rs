@@ -12,13 +12,14 @@
 //! combined with "Github:", "Github topic:", or "Github issue:" lines that
 //! give the github issue to comment in.
 
-use futures::future::{ok, Either, FutureExt};
+use futures::future::ok;
+use futures::join;
 use futures::prelude::*;
-use hubcaps::comments::CommentOptions;
-use hubcaps::{Credentials, Github};
 use irc::client::prelude::{Client as IrcClient, Command, Message};
 use lazy_static::lazy_static;
 use log::{info, warn};
+use octorust::types::PullsUpdateReviewRequest;
+use octorust::{auth::Credentials as GithubCredentials, Client as GithubClient};
 use regex::Regex;
 use serde::Deserialize;
 use std::cmp;
@@ -961,7 +962,7 @@ impl ChannelData {
                     self.config,
                     self.github_type,
                 );
-                task.run();
+                let _ = tokio::spawn(task.run());
             }
         }
     }
@@ -979,25 +980,19 @@ where
 {
     let new_url = GithubURL::from_string(s).expect("regexp failure");
     let github = github_connection(config, github_type);
-    match github {
+    Ok(match github {
         // When mocking the github connection for tests, pretend it's "TITLE".
         // FIXME: Are there now better methods for this in futures 0.3?
-        None => Either::Left(future::ok::<String, ()>(String::from("TITLE"))),
-        Some(github) => Either::Right({
-            let repo = github.repo(new_url.owner, new_url.repo);
-            let num = new_url.number;
-            match new_url.which {
-                IssuesOrPull::Issues => {
-                    Either::Left(repo.issue(num).get().map_ok(|issue| issue.title))
-                }
-                IssuesOrPull::Pull => {
-                    Either::Right(repo.pulls().get(num).get().map_ok(|pull| pull.title))
-                }
-            }
-            .or_else(|err| future::ok(format!("COULDN'T GET TITLE due to error {err:?}")))
-        }),
-    }
-    .await
+        None => String::from("TITLE"),
+        Some(github) => github
+            .issues()
+            .get(&new_url.owner, &new_url.repo, new_url.number)
+            .await
+            .map_or_else(
+                |err| format!("COULDN'T GET TITLE due to error {err:?}"),
+                |response| response.body.title,
+            ),
+    })
 }
 
 /// extract_github_url can be run on any regular line of text received
@@ -1103,17 +1098,11 @@ fn check_github_url(
     }
 }
 
-enum IssuesOrPull {
-    Issues,
-    Pull,
-}
-
 struct GithubURL {
     url: String, // The whole URL, of which the below are parts.
     owner: String,
     repo: String,
-    which: IssuesOrPull,
-    number: u64,
+    number: i64,
 }
 
 impl GithubURL {
@@ -1123,7 +1112,7 @@ impl GithubURL {
     {
         lazy_static! {
             static ref GITHUB_URL_RE: Regex =
-                Regex::new(r"^https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(?P<type>(issues|pull))/(?P<number>[0-9]+)$")
+                Regex::new(r"^https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(issues|pull)/(?P<number>[0-9]+)$")
                 .unwrap();
         }
 
@@ -1132,12 +1121,7 @@ impl GithubURL {
             url: String::from(""),
             owner: String::from(&caps["owner"]),
             repo: String::from(&caps["repo"]),
-            which: match &(caps["type"]) {
-                "issues" => IssuesOrPull::Issues,
-                "pull" => IssuesOrPull::Pull,
-                _ => panic!("the regexp should not have allowed this"),
-            },
-            number: caps["number"].parse::<u64>().unwrap(),
+            number: caps["number"].parse::<i64>().unwrap(),
         });
         if let Some(ref mut result) = result {
             result.url = s;
@@ -1148,16 +1132,39 @@ impl GithubURL {
 
 // Return Some(connection) when we're really connecting and None if we're
 // mocking the connection.
-fn github_connection(config: &BotConfig, github_type: GithubType) -> Option<Github> {
+fn github_connection(config: &BotConfig, github_type: GithubType) -> Option<GithubClient> {
     match github_type {
         GithubType::RealGithubConnection => Some(
-            Github::new(
+            GithubClient::new(
                 config.github_uastring.as_str(),
-                Some(Credentials::Token(config.github_access_token.clone())),
+                Some(GithubCredentials::Token(config.github_access_token.clone())),
             )
             .unwrap(),
         ),
         GithubType::MockGithubConnection => None,
+    }
+}
+
+struct RemoveLabelTask {
+    github: GithubClient,
+    owner: String,
+    repo: String,
+    number: i64,
+    label: String,
+}
+
+impl RemoveLabelTask {
+    async fn run(&self) -> Result<String, ()> {
+        let remove_result = self
+            .github
+            .issues()
+            .remove_label(&self.owner, &self.repo, self.number, &self.label)
+            .await;
+        let label = &self.label;
+        Ok(match remove_result {
+            Ok(_) => format!(" and removed the \"{label}\" label"),
+            Err(err) => format!(" and UNABLE TO REMOVE LABEL \"{label}\" due to error: {err:?}"),
+        })
     }
 }
 
@@ -1166,7 +1173,7 @@ struct GithubCommentTask {
     irc: &'static IrcClient,
     response_target: String,
     data: TopicData,
-    github: Option<Github>, /* None means we're mocking the connection */
+    github: Option<GithubClient>, /* None means we're mocking the connection */
 }
 
 impl GithubCommentTask {
@@ -1186,11 +1193,7 @@ impl GithubCommentTask {
         }
     }
 
-    fn run(self) {
-        // FIXME: do this again?
-        // For real github connections, run on another thread, but for fake
-        // ones, run synchronously to make testing easier.
-
+    async fn run(self) {
         if let Some(ref github_url) = self.data.github_url {
             if let Some(github_url) = GithubURL::from_string(github_url.clone()) {
                 let comment_text = format!("{}", self.data);
@@ -1204,87 +1207,64 @@ impl GithubCommentTask {
                 };
                 match self.github {
                     Some(ref github) => {
-                        let repo = github.repo(github_url.owner, github_url.repo);
+                        let owner = github_url.owner;
+                        let repo = github_url.repo;
                         let num = github_url.number;
-                        let (issue, pulls, pull);
-                        let (comments, labels, labels_future) = match github_url.which {
-                            IssuesOrPull::Issues => {
-                                issue = repo.issue(num);
-                                (
-                                    issue.comments(),
-                                    issue.labels(),
-                                    Either::Left(issue.get().map_ok(|i| i.labels)),
-                                )
+                        let url = github_url.url;
+                        let issues = github.issues();
+                        // Despite documentation, 0 and 0 (which are the values octorust omits)
+                        // seems to be the only combination that works here.
+                        let labels_result =
+                            issues.list_labels_on_issue(&owner, &repo, num, 0, 0).await;
+                        let response_text = match labels_result {
+                            Err(err) => {
+                                format!("UNABLE TO RETRIEVE LABELS ON {url} due to error: {err:?}")
                             }
-                            IssuesOrPull::Pull => {
-                                pulls = repo.pulls();
-                                pull = pulls.get(num);
-                                (
-                                    pull.comments(),
-                                    pull.labels(),
-                                    Either::Right(pull.get().map_ok(|p| p.labels)),
-                                )
-                            }
-                        };
-
-                        let _ = tokio::spawn(labels_future.then({
-                            let github_url = github_url.url;
-                            let remove_from_agenda = self.data.remove_from_agenda;
-                            move |labels_result| {
-                            match labels_result {
-                                Err(err) => Either::Left(future::ok::<String, ()>(format!("UNABLE TO RETRIEVE LABELS ON {github_url} due to error: {err:?}"))),
-                                Ok(labels_vec) => {
-
-                                    let commentopts = &CommentOptions { body: comment_text };
-                                    let comment_task = comments.create(commentopts).then({
-                                        let github_url = github_url.clone();
+                            Ok(labels_response) => {
+                                // TODO: Add the comment in parallel with retrieving the labels.
+                                let comment_body = PullsUpdateReviewRequest { body: comment_text };
+                                let comment_task = issues.create_comment(&owner, &repo, num, &comment_body).then({
+                                        let url = url.clone();
                                         move |result| {
                                             ok::<String, ()>(match result {
-                                                Ok(_) => format!("Successfully commented on {github_url}"),
+                                                Ok(_) => format!("Successfully commented on {url}"),
                                                 Err(err) => format!(
-                                                    "UNABLE TO COMMENT on {github_url} due to error: {err:?}"
+                                                    "UNABLE TO COMMENT on {url} due to error: {err:?}"
                                                 ),
                                             })
                                         }
                                     });
 
-                                    let mut label_tasks = Vec::new();
-                                    if remove_from_agenda {
-                                        // We had resolutions, so remove any label starting with
-                                        // "Agenda+" (such as "Agenda+", "Agenda+ F2F", "Agenda+
-                                        // TPAC", etc.).
-                                        for label_obj in labels_vec {
-                                            let label = label_obj.name;
-                                            if label.starts_with("Agenda+") {
-                                                let success_str = format!(" and removed the \"{label}\" label");
-                                                label_tasks.push(labels.remove(&label).then({
-                                                    let github_url = github_url.clone();
-                                                    move |result| {
-                                                        ok(match result {
-                                                            Ok(_) => success_str,
-                                                            Err(err) => format!(
-                                                                " UNABLE TO REMOVE LABEL {label} on {github_url} due to error: {err:?}"
-                                                            ),
-                                                        })
-                                                    }
-                                                }));
-                                            }
+                                let mut label_tasks = Vec::new();
+                                if self.data.remove_from_agenda {
+                                    // We had resolutions, so remove any label starting with
+                                    // "Agenda+" (such as "Agenda+", "Agenda+ F2F", "Agenda+
+                                    // TPAC", etc.).
+                                    for label_obj in labels_response.body {
+                                        let label = label_obj.name;
+                                        if label.starts_with("Agenda+") {
+                                            label_tasks.push(RemoveLabelTask {
+                                                github: github.clone(),
+                                                owner: owner.clone(),
+                                                repo: repo.clone(),
+                                                number: num,
+                                                label: label.clone(),
+                                            });
                                         }
                                     }
-
-                                    Either::Right(
-                                        futures::future::join(comment_task, futures::future::join_all(label_tasks))
-                                            .map(|(comment_msg, label_msg_vec)| {
-                                                Ok(iter::once(&comment_msg)
-                                                    .chain(label_msg_vec.iter())
-                                                    .flat_map(|s| s.as_ref().unwrap().chars())
-                                                    .collect::<String>())
-                                            })
-                                    )
                                 }
+
+                                let (comment_msg, label_msg_vec) = join!(
+                                    comment_task,
+                                    futures::future::join_all(label_tasks.iter().map(|t| t.run()))
+                                );
+                                iter::once(&comment_msg)
+                                    .chain(label_msg_vec.iter())
+                                    .flat_map(|s| s.as_ref().unwrap().chars())
+                                    .collect::<String>()
                             }
-                        }})
-                        .map_ok(move |s| send_response(s)));
+                        };
+                        send_response(response_text);
                     }
                     None => {
                         // Mock the github comments by sending them over IRC

@@ -9,6 +9,7 @@
 >PRIVMSG #testchannel2 :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1 (TITLE).\u{1}
 <:dbaron!sid755@public.cloak PRIVMSG #testchannel2 :Florian: we need to figure out line-height first
 <:astearns!sid711@public.cloak PRIVMSG #testchannel2 :test-github-bot: bye?
+>PART #testchannel2 :Leaving at request of astearns.  Feel free to /invite me back.
 !!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
 !The Second Bot-Testing Working Group just discussed `step sizing`.
 !
@@ -20,4 +21,3 @@
 !
 !!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
 >PRIVMSG #testchannel2 :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
->PART #testchannel2 :Leaving at request of astearns.  Feel free to /invite me back.
