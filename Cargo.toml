@@ -9,8 +9,7 @@ edition = "2021"
 futures = "0.3"
 log = "0.4"
 env_logger = "0.11"
-# TODO: update irc to 1.0
-irc = { version = "0.15", default-features = false, features = ["tls-rust", "serde"] }
+irc = { version = "1.0", default-features = false, features = ["tls-rust", "serde"] }
 lazy_static = "1.4"
 regex = "1.10"
 tokio = { version = "1.35", features = ["rt", "macros", "time", "io-util", "net"] }
