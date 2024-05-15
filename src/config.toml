@@ -215,3 +215,9 @@ github_repos_allowed = [
     "w3c/virtual-keyboard",
     "w3c/edit-context",
 ]
+
+[channels."#matf"]
+group = "Mobile Accessibility Task Force"
+github_repos_allowed = [
+    "w3c/matf",
+]
