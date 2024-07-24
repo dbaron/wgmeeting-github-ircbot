@@ -16,8 +16,8 @@ use anyhow::Result;
 use futures::prelude::*;
 use futures::task::Poll;
 use irc::client::prelude::{Client as IrcClient, Config as IrcConfig};
-use lazy_static::lazy_static;
 use log::{debug, info};
+use once_cell::sync::Lazy;
 use std::cell::{Cell, RefCell};
 use std::fs::File;
 use std::io::Read;
@@ -249,11 +249,12 @@ async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<()> {
         max_messages_in_burst: Some(50),
         ..Default::default()
     };
-    lazy_static! {
-        static ref BOT_CONFIG: BotConfig = BotConfig {
-            source: "https://github.com/dbaron/wgmeeting-github-ircbot".to_string(),
-            channels: vec![
-                ("#meetingbottest".to_string(), ChannelConfig {
+    static BOT_CONFIG: Lazy<BotConfig> = Lazy::new(|| BotConfig {
+        source: "https://github.com/dbaron/wgmeeting-github-ircbot".to_string(),
+        channels: vec![
+            (
+                "#meetingbottest".to_string(),
+                ChannelConfig {
                     group: "Bot-Testing Working Group".to_string(),
                     github_repos_allowed: vec![
                         "dbaron/wgmeeting-github-ircbot".to_string(),
@@ -261,30 +262,34 @@ async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<()> {
                         "upsuper/*".to_string(),
                     ],
                     publish_resolutions_only: false,
-                }),
-                ("#testchannel2".to_string(), ChannelConfig {
+                },
+            ),
+            (
+                "#testchannel2".to_string(),
+                ChannelConfig {
                     group: "Second Bot-Testing Working Group".to_string(),
-                    github_repos_allowed: vec![
-                        "dbaron/wgmeeting-github-ircbot".to_string(),
-                    ],
+                    github_repos_allowed: vec!["dbaron/wgmeeting-github-ircbot".to_string()],
                     publish_resolutions_only: false,
-                }),
-                ("#testresolutionsonly".to_string(), ChannelConfig {
+                },
+            ),
+            (
+                "#testresolutionsonly".to_string(),
+                ChannelConfig {
                     group: "Third Bot-Testing Working Group".to_string(),
-                    github_repos_allowed: vec![
-                        "dbaron/wgmeeting-github-ircbot".to_string(),
-                    ],
+                    github_repos_allowed: vec!["dbaron/wgmeeting-github-ircbot".to_string()],
                     publish_resolutions_only: true,
-                }),
-            ].into_iter().collect(),
-            // Use of a 0 value disables timeouts, which is needed to avoid intermittent
-            // failures (using really-0 timeouts) or having the event loop wait until the
-            // timeout completes (positive timeouts).
-            activity_timeout_minutes: 0,
-            owners: vec![format!("dbaron")],
-            ..Default::default()
-        };
-    }
+                },
+            ),
+        ]
+        .into_iter()
+        .collect(),
+        // Use of a 0 value disables timeouts, which is needed to avoid intermittent
+        // failures (using really-0 timeouts) or having the event loop wait until the
+        // timeout completes (positive timeouts).
+        activity_timeout_minutes: 0,
+        owners: vec![format!("dbaron")],
+        ..Default::default()
+    });
 
     let mut irc_state = IRCState::new(GithubType::MockGithubConnection);
 
