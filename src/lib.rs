@@ -19,14 +19,13 @@ use irc::client::prelude::{Client as IrcClient, Command, Message};
 use log::{info, warn};
 use octorust::types::PullsUpdateReviewRequest;
 use octorust::{auth::Credentials as GithubCredentials, Client as GithubClient};
-use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
 use std::cmp;
 use std::collections::HashMap;
 use std::fmt;
 use std::iter;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, LazyLock, RwLock};
 use tokio::time::{Duration, Instant};
 
 /// Configuration for a single IRC channel.
@@ -296,7 +295,7 @@ fn send_irc_line(irc: &IrcClient, target: &str, is_action: bool, line: String) {
 /// commit hash.  Public only because the test code needs access to it, in
 /// order to expect the right string.
 pub fn code_description() -> &'static String {
-    static CODE_DESCRIPTION: Lazy<String> = Lazy::new(|| {
+    static CODE_DESCRIPTION: LazyLock<String> = LazyLock::new(|| {
         format!(
             "{} version {}, compiled from {}",
             env!("CARGO_PKG_NAME"),
@@ -734,8 +733,8 @@ fn escape_for_html_block(s: &str) -> String {
     //
     // Do this first, in case we later start doing escaping that produces HTML
     // numeric character references in decimal.
-    static ISSUE_RE: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"(?P<space>[[:space:]])[#](?P<number>[0-9])").unwrap());
+    static ISSUE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(?P<space>[[:space:]])[#](?P<number>[0-9])").unwrap());
     let no_issue_links = ISSUE_RE.replace_all(s, "${space}#\u{feff}${number}");
 
     no_issue_links.replace('&', "&amp;").replace('<', "&lt;")
@@ -1007,7 +1006,7 @@ fn extract_github_url(
     current_github_url: &Option<String>,
     in_topic: bool,
 ) -> (Option<Option<String>>, Option<String>) {
-    static GITHUB_URL_PART_RE: Lazy<Regex> = Lazy::new(|| {
+    static GITHUB_URL_PART_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"https://github.com/(?P<repo>[^/]*/[^/]*)/(issues|pull)/(?P<number>[0-9]+)")
             .unwrap()
     });
@@ -1047,7 +1046,7 @@ fn check_github_url(
     config: &BotConfig,
     target: &str,
 ) -> (Option<Option<String>>, Option<String>) {
-    static GITHUB_URL_WHOLE_RE: Lazy<Regex> = Lazy::new(|| {
+    static GITHUB_URL_WHOLE_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"^(?P<issueurl>https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(issues|pull)/(?P<number>[0-9]+))([#][^ ]*)?$").unwrap()
     });
     if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
@@ -1104,7 +1103,7 @@ impl GithubURL {
     where
         S: Into<String>,
     {
-        static GITHUB_URL_RE: Lazy<Regex> = Lazy::new(|| {
+        static GITHUB_URL_RE: LazyLock<Regex> = LazyLock::new(|| {
             Regex::new(r"^https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(issues|pull)/(?P<number>[0-9]+)$").unwrap()
         });
 

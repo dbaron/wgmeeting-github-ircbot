@@ -17,12 +17,12 @@ use futures::prelude::*;
 use futures::task::Poll;
 use irc::client::prelude::{Client as IrcClient, Config as IrcConfig};
 use log::{debug, info};
-use once_cell::sync::Lazy;
 use std::cell::{Cell, RefCell};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::str;
+use std::sync::LazyLock;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 use tokio::time::{Duration, Instant};
@@ -249,7 +249,7 @@ async fn run_irc_bot(is_finished: &Cell<bool>) -> Result<()> {
         max_messages_in_burst: Some(50),
         ..Default::default()
     };
-    static BOT_CONFIG: Lazy<BotConfig> = Lazy::new(|| BotConfig {
+    static BOT_CONFIG: LazyLock<BotConfig> = LazyLock::new(|| BotConfig {
         source: "https://github.com/dbaron/wgmeeting-github-ircbot".to_string(),
         channels: vec![
             (
