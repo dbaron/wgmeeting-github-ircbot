@@ -188,6 +188,7 @@ publish_resolutions_only = true
 [channels."#webdriver"]
 group = "Browser Testing and Tools Working Group"
 github_repos_allowed = [
+    "w3c/at-driver",
     "w3c/webdriver",
     "w3c/webdriver-bidi",
 ]
