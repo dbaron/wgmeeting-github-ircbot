@@ -133,6 +133,7 @@ group = "ARIA-AT Community Group"
 github_repos_allowed = [
     "w3c/aria-at",
     "w3c/aria-at-app",
+    "w3c/at-driver",
 ]
 
 [channels."#svg"]
