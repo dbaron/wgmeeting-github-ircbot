@@ -18,7 +18,7 @@ use futures::prelude::*;
 use irc::client::prelude::{Client as IrcClient, Command, Message};
 use log::{info, warn};
 use octorust::types::PullsUpdateReviewRequest;
-use octorust::{auth::Credentials as GithubCredentials, Client as GithubClient};
+use octorust::{Client as GithubClient, auth::Credentials as GithubCredentials};
 use regex::Regex;
 use serde::Deserialize;
 use std::cmp;
@@ -368,7 +368,12 @@ fn handle_bot_command(
                 let mut this_channel_data = this_channel_data_arc.write().unwrap();
                 if let Some(ref topic) = this_channel_data.current_topic {
                     if Some(new_url) == topic.github_url.as_ref() {
-                        send_line(response_username, &format!("ignoring request to take up {new_url} which is already the current github URL"));
+                        send_line(
+                            response_username,
+                            &format!(
+                                "ignoring request to take up {new_url} which is already the current github URL"
+                            ),
+                        );
                         return;
                     }
                 }
@@ -446,10 +451,22 @@ fn handle_bot_command(
                 "  reboot    - Make me leave the server and exit.  If properly configured, I will \
                  then update myself and return.",
             );
-            send_line(None, "  take up [URL] - Start a new topic and print a \"Topic:\" line based on the title of the github issue/PR at URL");
-            send_line(None, "  topic [URL]   - Start a new topic and print a \"Topic:\" line based on the title of the github issue/PR at URL");
-            send_line(None, "  take up subtopic [URL] - Start a new topic and print a \"Subtopic:\" line based on the title of the github issue/PR at URL");
-            send_line(None, "  subtopic [URL]         - Start a new topic and print a \"Subtopic:\" line based on the title of the github issue/PR at URL");
+            send_line(
+                None,
+                "  take up [URL] - Start a new topic and print a \"Topic:\" line based on the title of the github issue/PR at URL",
+            );
+            send_line(
+                None,
+                "  topic [URL]   - Start a new topic and print a \"Topic:\" line based on the title of the github issue/PR at URL",
+            );
+            send_line(
+                None,
+                "  take up subtopic [URL] - Start a new topic and print a \"Subtopic:\" line based on the title of the github issue/PR at URL",
+            );
+            send_line(
+                None,
+                "  subtopic [URL]         - Start a new topic and print a \"Subtopic:\" line based on the title of the github issue/PR at URL",
+            );
         }
         "intro" => {
             send_line(
@@ -464,7 +481,7 @@ fn handle_bot_command(
             );
             send_line(
                 None,
-                "You can also use the \"take up\" command if you want me to output the \"Topic:\" lines myself, based on the title of the github issue."
+                "You can also use the \"take up\" command if you want me to output the \"Topic:\" lines myself, based on the title of the github issue.",
             );
             if response_target.starts_with('#') {
                 send_line(
@@ -498,24 +515,27 @@ fn handle_bot_command(
             sorted_channels.sort();
             for channel in sorted_channels {
                 let channel_data = irc_state.channel_data[channel].read().unwrap();
-                if let Some(ref topic) = channel_data.current_topic {
-                    send_line(
-                        None,
-                        &format!(
-                            "  {} ({} lines buffered on \"{}\")",
-                            channel,
-                            topic.lines.len(),
-                            topic.topic
-                        ),
-                    );
-                    match topic.github_url {
-                        None => send_line(None, "    no GitHub URL to comment on"),
-                        Some(ref github_url) => {
-                            send_line(None, &format!("    will comment on {github_url}"))
-                        }
-                    };
-                } else {
-                    send_line(None, &format!("  {channel} (no topic data buffered)"));
+                match channel_data.current_topic {
+                    Some(ref topic) => {
+                        send_line(
+                            None,
+                            &format!(
+                                "  {} ({} lines buffered on \"{}\")",
+                                channel,
+                                topic.lines.len(),
+                                topic.topic
+                            ),
+                        );
+                        match topic.github_url {
+                            None => send_line(None, "    no GitHub URL to comment on"),
+                            Some(ref github_url) => {
+                                send_line(None, &format!("    will comment on {github_url}"))
+                            }
+                        };
+                    }
+                    _ => {
+                        send_line(None, &format!("  {channel} (no topic data buffered)"));
+                    }
                 }
             }
         }
@@ -1019,22 +1039,25 @@ fn extract_github_url(
         } else {
             check_github_url(maybe_url, config, target)
         }
-    } else if let Some(ref rematch) = GITHUB_URL_PART_RE.find(message) {
-        if &Some(String::from(rematch.as_str())) == current_github_url || !in_topic {
-            (None, None)
-        } else {
-            (
-                None,
-                Some(String::from(
-                    "Because I don't want to spam github issues unnecessarily, \
+    } else {
+        match GITHUB_URL_PART_RE.find(message) {
+            Some(ref rematch) => {
+                if &Some(String::from(rematch.as_str())) == current_github_url || !in_topic {
+                    (None, None)
+                } else {
+                    (
+                        None,
+                        Some(String::from(
+                            "Because I don't want to spam github issues unnecessarily, \
                      I won't comment in that github issue unless you write \
                      \"Github: <issue-url> | none\" (or \"Github issue: \
                      ...\"/\"Github topic: ...\").",
-                )),
-            )
+                        )),
+                    )
+                }
+            }
+            _ => (None, None),
         }
-    } else {
-        (None, None)
     }
 }
 
@@ -1049,45 +1072,48 @@ fn check_github_url(
     static GITHUB_URL_WHOLE_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"^(?P<issueurl>https://github.com/(?P<owner>[^/]*)/(?P<repo>[^/]*)/(issues|pull)/(?P<number>[0-9]+))([#][^ ]*)?$").unwrap()
     });
-    if let Some(ref caps) = GITHUB_URL_WHOLE_RE.captures(maybe_url) {
-        let channel_config = config.channels.get(target);
-        if channel_config.is_none() {
-            (
-                None,
-                Some(String::from("I can't comment on that github issue because I don't have a configuration of allowed repositories for this channel.")),
-            )
-        } else {
-            let allowed_repos = &channel_config.unwrap().github_repos_allowed;
-            let is_allowed = allowed_repos.iter().any(|r| {
-                let pos = match r.find('/') {
-                    Some(pos) => pos,
-                    None => return false,
-                };
-                let (owner, repo) = r.split_at(pos);
-                let repo = &repo[1..];
-                owner == &caps["owner"] && (repo == &caps["repo"] || repo == "*")
-            });
-            if is_allowed {
-                (Some(Some(String::from(&caps["issueurl"]))), None)
-            } else {
+    match GITHUB_URL_WHOLE_RE.captures(maybe_url) {
+        Some(ref caps) => {
+            let channel_config = config.channels.get(target);
+            if channel_config.is_none() {
                 (
                     None,
-                    Some(format!(
-                        "I can't comment on that github issue because it's not in \
-                         a repository I'm allowed to comment on, which are: {}.",
-                        allowed_repos.join(" "),
+                    Some(String::from(
+                        "I can't comment on that github issue because I don't have a configuration of allowed repositories for this channel.",
                     )),
                 )
+            } else {
+                let allowed_repos = &channel_config.unwrap().github_repos_allowed;
+                let is_allowed = allowed_repos.iter().any(|r| {
+                    let pos = match r.find('/') {
+                        Some(pos) => pos,
+                        None => return false,
+                    };
+                    let (owner, repo) = r.split_at(pos);
+                    let repo = &repo[1..];
+                    owner == &caps["owner"] && (repo == &caps["repo"] || repo == "*")
+                });
+                if is_allowed {
+                    (Some(Some(String::from(&caps["issueurl"]))), None)
+                } else {
+                    (
+                        None,
+                        Some(format!(
+                            "I can't comment on that github issue because it's not in \
+                         a repository I'm allowed to comment on, which are: {}.",
+                            allowed_repos.join(" "),
+                        )),
+                    )
+                }
             }
         }
-    } else {
-        (
+        _ => (
             None,
             Some(String::from(
                 "I can't comment on that because it doesn't look like a \
                  github issue to me.",
             )),
-        )
+        ),
     }
 }
 
