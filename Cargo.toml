@@ -12,7 +12,7 @@ env_logger = "0.11"
 irc = { version = "1.0", default-features = false, features = ["tls-rust", "serde"] }
 regex = "1.0"
 tokio = { version = "1.6", features = ["rt", "macros", "time", "io-util", "net"] }
-octorust = "0.7"
+octorust = "0.10"
 serde = "1.0"
 serde_derive = "1.0"
 diff = "0.1"
