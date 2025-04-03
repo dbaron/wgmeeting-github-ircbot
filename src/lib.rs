@@ -239,7 +239,8 @@ fn check_command_in_channel(mynick: &str, msg: &str) -> Option<String> {
         return None;
     }
     let after_nick = &msg[mynick.len()..];
-    if !after_nick.starts_with(':') && !after_nick.starts_with(',') {
+    if !after_nick.starts_with(':') && !after_nick.starts_with(',') && !after_nick.starts_with(' ')
+    {
         return None;
     }
     let after_punct = &after_nick[1..];

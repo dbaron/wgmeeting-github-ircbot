@@ -4,3 +4,14 @@
 >PRIVMSG #meetingbottest :I currently have data for the following channels:
 >PRIVMSG #meetingbottest :  #meetingbottest (1 lines buffered on \"This is a topic\")
 >PRIVMSG #meetingbottest :    no GitHub URL to comment on
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot: status
+>PRIVMSG #meetingbottest :dbaron, This is [[CODE_DESCRIPTION]], which is probably in the repository at https://github.com/dbaron/wgmeeting-github-ircbot/
+>PRIVMSG #meetingbottest :I currently have data for the following channels:
+>PRIVMSG #meetingbottest :  #meetingbottest (1 lines buffered on \"This is a topic\")
+>PRIVMSG #meetingbottest :    no GitHub URL to comment on
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot- status
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot status
+>PRIVMSG #meetingbottest :dbaron, This is [[CODE_DESCRIPTION]], which is probably in the repository at https://github.com/dbaron/wgmeeting-github-ircbot/
+>PRIVMSG #meetingbottest :I currently have data for the following channels:
+>PRIVMSG #meetingbottest :  #meetingbottest (2 lines buffered on \"This is a topic\")
+>PRIVMSG #meetingbottest :    no GitHub URL to comment on
