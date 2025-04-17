@@ -57,6 +57,7 @@ fn read_config() -> (IrcConfig, BotConfig) {
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     env_logger::init();
+    let _ = rustls::crypto::ring::default_provider().install_default();
     let (irc_config, bot_config) = read_config();
     let bot_config: &'static _ = Box::leak(Box::new(bot_config));
 

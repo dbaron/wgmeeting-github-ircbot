@@ -2422,6 +2422,7 @@ dependencies = [
  "log",
  "octorust",
  "regex",
+ "rustls",
  "serde",
  "serde_derive",
  "tokio",
