@@ -136,6 +136,12 @@ github_repos_allowed = [
     "w3c/at-driver",
 ]
 
+[channels."#pdf-aam"]
+group = "PDF-AAM Task Force"
+github_repos_allowed = [
+    "w3c/pdf-aam",
+]
+
 [channels."#svg"]
 group = "SVG Working Group"
 github_repos_allowed = [
