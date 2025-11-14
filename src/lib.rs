@@ -403,7 +403,7 @@ fn handle_bot_command(
                             irc,
                             response_target,
                             response_is_action,
-                            format!("OK, I'll post this discussion to {new_url}."),
+                            format!("OK, I'll post this discussion to {new_url}"),
                         );
                         this_channel_data.start_topic(irc, &title);
                         this_channel_data
