@@ -49,6 +49,8 @@ github_repos_allowed = [
     "WICG/construct-stylesheets",
     "WICG/scroll-animations",
     "WICG/custom-state-pseudo-class",
+    "openui/open-ui",
+    "whatwg/html",
 ]
 
 [channels."#houdini"]
@@ -63,6 +65,8 @@ github_repos_allowed = [
     "WICG/construct-stylesheets",
     "WICG/scroll-animations",
     "WICG/custom-state-pseudo-class",
+    "openui/open-ui",
+    "whatwg/html",
 ]
 
 [channels."#tt"]
