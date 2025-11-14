@@ -232,7 +232,6 @@ github_repos_allowed = [
     "w3c/matf",
 ]
 
-
 [channels."#webcomponents"]
 group = "Web Components Community Group"
 github_repos_allowed = [
