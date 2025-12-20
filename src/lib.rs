@@ -930,12 +930,11 @@ impl ChannelData {
                 }
                 // Skip the code below because we don't want to rerun github URL
                 // detection.  All we need from it is to push the line.
-                // TODO: Is there a more idiomatic way to write this (a la unwrap())?
-                if let Some(ref mut data) = self.current_topic {
-                    data.lines.push(line);
-                } else {
-                    panic!("no current topic");
-                }
+                self.current_topic
+                    .as_mut()
+                    .expect("just started a topic")
+                    .lines
+                    .push(line);
                 return;
             }
         }
