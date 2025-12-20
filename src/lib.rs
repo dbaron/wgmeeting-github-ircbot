@@ -857,12 +857,86 @@ impl ChannelData {
     // Returns the response that should be sent to the message over IRC.
     // FIXME: Move this to be a method on IRCState.
     fn add_line(&mut self, irc: &'static IrcClient, target: &str, line: ChannelLine) {
+        static AGENDUM_RE: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"^agendum \d+ -- (.*) -- taken up \[from [^ \[\]]*\]$").unwrap()
+        });
+        static MARKDOWN_LINK_RE: LazyLock<Regex> =
+            LazyLock::new(|| Regex::new(r"^\[(.*)\]\(([^ ]*)\)$").unwrap());
+        static IVAN_LINK_RE: LazyLock<Regex> =
+            LazyLock::new(|| Regex::new(r"^-> (.*) ([^ ]*)$").unwrap());
         if !line.is_action {
             if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
                 self.start_topic(irc, topic);
             } else if let Some(ref subtopic) = strip_ci_prefix(&line.message, "subtopic:") {
                 // Treat subtopic: the same as topic:, at least for now.
                 self.start_topic(irc, subtopic);
+            } else if let Some(ref agendum_captures) = AGENDUM_RE.captures(&*line.message) {
+                let agendum = agendum_captures.get(1).unwrap().as_str();
+                let (topic, topic_url) =
+                    if let Some(ref markdown_captures) = MARKDOWN_LINK_RE.captures(agendum) {
+                        (
+                            markdown_captures.get(1).unwrap().as_str(),
+                            Some(markdown_captures.get(2).unwrap().as_str()),
+                        )
+                    } else if let Some(ref ivan_captures) = IVAN_LINK_RE.captures(agendum) {
+                        (
+                            ivan_captures.get(1).unwrap().as_str(),
+                            Some(ivan_captures.get(2).unwrap().as_str()),
+                        )
+                    } else {
+                        (agendum, None)
+                    };
+                if let Some(topic_url) = topic_url {
+                    match check_github_url(topic_url, self.config, target) {
+                        (Some(Some(new_url)), None) => {
+                            self.end_topic(irc);
+
+                            let respond_with = {
+                                let target = target.to_owned();
+                                move |response| {
+                                    send_irc_line(irc, &target, true, response);
+                                }
+                            };
+
+                            let respond_title_future = fetch_github_title(
+                                self.config,
+                                self.github_type,
+                                new_url.clone(),
+                            )
+                            .map_ok({
+                                let new_url = new_url.clone();
+                                move |title| {
+                                    respond_with(format!(
+                                        "OK, I'll post this discussion to {new_url} ({title})."
+                                    ));
+                                }
+                            });
+                            let _ = tokio::spawn(respond_title_future);
+
+                            self.start_topic(irc, topic);
+                            self.current_topic
+                                .as_mut()
+                                .expect("just started a topic")
+                                .github_url = Some(new_url);
+                        }
+                        (None, Some(extract_failure_response)) => {
+                            self.start_topic(irc, topic);
+                            send_irc_line(irc, &target, false, extract_failure_response);
+                        }
+                        _ => panic!("unexpected state"),
+                    }
+                } else {
+                    self.start_topic(irc, topic);
+                }
+                // Skip the code below because we don't want to rerun github URL
+                // detection.  All we need from it is to push the line.
+                // TODO: Is there a more idiomatic way to write this (a la unwrap())?
+                if let Some(ref mut data) = self.current_topic {
+                    data.lines.push(line);
+                } else {
+                    panic!("no current topic");
+                }
+                return;
             }
         }
         if (line.is_action
