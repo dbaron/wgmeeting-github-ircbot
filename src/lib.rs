@@ -18,7 +18,9 @@ use futures::prelude::*;
 use irc::client::prelude::{Client as IrcClient, Command, Message};
 use log::{info, warn};
 use octorust::types::PullsUpdateReviewRequest;
-use octorust::{Client as GithubClient, auth::Credentials as GithubCredentials};
+use octorust::{
+    Client as GithubClient, ClientError as GithubError, auth::Credentials as GithubCredentials,
+};
 use regex::Regex;
 use serde::Deserialize;
 use std::cmp;
@@ -411,6 +413,19 @@ fn handle_bot_command(
                             .as_mut()
                             .expect("just started a topic")
                             .github_url = Some(new_url);
+                    }
+                })
+                .map_err({
+                    let new_url = new_url.clone();
+                    let response_target = String::from(response_target);
+                    move |result| {
+                        let response_target = &*response_target;
+                        send_irc_line(
+                            irc,
+                            response_target,
+                            response_is_action,
+                            format!("Error getting title of {new_url}: {result}"),
+                        );
                     }
                 });
                 let _ = tokio::spawn(respond_title_future);
@@ -891,20 +906,36 @@ impl ChannelData {
                         (Some(Some(new_url)), None) => {
                             self.end_topic(irc);
 
-                            let respond_with = {
-                                let target = target.to_owned();
-                                move |response| {
-                                    send_irc_line(irc, &target, true, response);
-                                }
-                            };
-
                             let respond_title_future = fetch_github_title(
                                 self.config,
                                 self.github_type,
                                 new_url.clone(),
                             )
+                            .or_else({
+                                let new_url = new_url.clone();
+                                let respond_with = {
+                                    let target = target.to_owned();
+                                    move |response| {
+                                        send_irc_line(irc, &target, true, response);
+                                    }
+                                };
+
+                                async move |result| -> Result<String, GithubError> {
+                                    respond_with(format!(
+                                        "Error while retrieving title of {new_url}: {result}."
+                                    ));
+                                    Ok(String::from("UNKNOWN TITLE"))
+                                }
+                            })
                             .map_ok({
                                 let new_url = new_url.clone();
+                                let respond_with = {
+                                    let target = target.to_owned();
+                                    move |response| {
+                                        send_irc_line(irc, &target, true, response);
+                                    }
+                                };
+
                                 move |title| {
                                     respond_with(format!(
                                         "OK, I'll post this discussion to {new_url} ({title})."
@@ -987,7 +1018,25 @@ impl ChannelData {
                     }
                     (Some(new_url), old_url) if *old_url == *new_url => (),
                     (Some(Some(new_url)), old_url_option) => {
-                        let respond_title_future = fetch_github_title(self.config, self.github_type, new_url.clone()).map_ok({
+                        let respond_title_future = fetch_github_title(
+                            self.config, self.github_type, new_url.clone()
+                        )
+                        .or_else({
+                            let new_url = new_url.clone();
+                            let respond_with = {
+                                let target = target.to_owned();
+                                move |response| {
+                                    send_irc_line(irc, &target, true, response);
+                                }
+                            };
+                            async move |result| -> Result<String, GithubError> {
+                                respond_with(format!(
+                                    "Error while retrieving title of {new_url}: {result}."
+                                ));
+                                Ok(String::from("UNKNOWN TITLE"))
+                            }
+                        })
+                        .map_ok({
                             let old_url_option = old_url_option.clone();
                             let new_url = new_url.clone();
                             move |title| {
@@ -1065,25 +1114,22 @@ async fn fetch_github_title<S>(
     config: &'static BotConfig,
     github_type: GithubType,
     s: S,
-) -> Result<String, ()>
+) -> Result<String, GithubError>
 where
     S: Into<String>,
 {
     let new_url = GithubURL::from_string(s).expect("regexp failure");
     let github = github_connection(config, github_type);
-    Ok(match github {
+    match github {
         // When mocking the github connection for tests, pretend it's "TITLE".
         // FIXME: Are there now better methods for this in futures 0.3?
-        None => String::from("TITLE"),
+        None => Ok(String::from("TITLE")),
         Some(github) => github
             .issues()
             .get(&new_url.owner, &new_url.repo, new_url.number)
             .await
-            .map_or_else(
-                |err| format!("COULDN'T GET TITLE due to error {err:?}"),
-                |response| response.body.title,
-            ),
-    })
+            .map(|response| response.body.title),
+    }
 }
 
 /// extract_github_url can be run on any regular line of text received
@@ -1309,18 +1355,22 @@ impl GithubCommentTask {
                             issues.list_labels_on_issue(&owner, &repo, num, 0, 0).await;
                         let response_text = match labels_result {
                             Err(err) => {
-                                format!("UNABLE TO RETRIEVE LABELS ON {url} due to error: {err:?}")
+                                format!(
+                                    "UNABLE TO RETRIEVE LABELS (OR COMMENT) ON {url} due to error: {err}"
+                                )
                             }
                             Ok(labels_response) => {
                                 // TODO: Add the comment in parallel with retrieving the labels.
                                 let comment_body = PullsUpdateReviewRequest { body: comment_text };
-                                let comment_task = issues.create_comment(&owner, &repo, num, &comment_body).then({
+                                let comment_task = issues
+                                    .create_comment(&owner, &repo, num, &comment_body)
+                                    .then({
                                         let url = url.clone();
                                         move |result| {
                                             ok::<String, ()>(match result {
                                                 Ok(_) => format!("Successfully commented on {url}"),
                                                 Err(err) => format!(
-                                                    "UNABLE TO COMMENT on {url} due to error: {err:?}"
+                                                    "UNABLE TO COMMENT on {url} due to error: {err}"
                                                 ),
                                             })
                                         }
