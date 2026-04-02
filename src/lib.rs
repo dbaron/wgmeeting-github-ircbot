@@ -387,45 +387,43 @@ fn handle_bot_command(
                     this_channel_data.github_type,
                     new_url.clone(),
                 )
-                .map_ok({
+                .map({
                     let new_url = new_url.clone();
                     let this_channel_data_arc = Arc::clone(this_channel_data_arc);
                     let response_target = String::from(response_target);
-                    move |title| {
+                    move |result| {
                         let mut this_channel_data = this_channel_data_arc.write().unwrap();
                         let response_target = &*response_target;
-
-                        send_irc_line(
-                            irc,
-                            response_target,
-                            false,
-                            format!("{topic_header}: {title}"),
-                        );
-                        send_irc_line(
-                            irc,
-                            response_target,
-                            response_is_action,
-                            format!("OK, I'll post this discussion to {new_url}"),
-                        );
-                        this_channel_data.start_topic(irc, &title);
-                        this_channel_data
-                            .current_topic
-                            .as_mut()
-                            .expect("just started a topic")
-                            .github_url = Some(new_url);
-                    }
-                })
-                .map_err({
-                    let new_url = new_url.clone();
-                    let response_target = String::from(response_target);
-                    move |result| {
-                        let response_target = &*response_target;
-                        send_irc_line(
-                            irc,
-                            response_target,
-                            response_is_action,
-                            format!("Error getting title of {new_url}: {result}"),
-                        );
+                        match result {
+                            Ok(title) => {
+                                send_irc_line(
+                                    irc,
+                                    response_target,
+                                    false,
+                                    format!("{topic_header}: {title}"),
+                                );
+                                send_irc_line(
+                                    irc,
+                                    response_target,
+                                    response_is_action,
+                                    format!("OK, I'll post this discussion to {new_url}"),
+                                );
+                                this_channel_data.start_topic(irc, &title);
+                                this_channel_data
+                                    .current_topic
+                                    .as_mut()
+                                    .expect("just started a topic")
+                                    .github_url = Some(new_url);
+                            }
+                            Err(err) => {
+                                send_irc_line(
+                                    irc,
+                                    response_target,
+                                    response_is_action,
+                                    format!("Error getting title of {new_url}: {err}"),
+                                );
+                            }
+                        }
                     }
                 });
                 let _ = tokio::spawn(respond_title_future);
@@ -906,37 +904,31 @@ impl ChannelData {
                         (Some(Some(new_url)), None) => {
                             self.end_topic(irc);
 
+                            let respond_with = {
+                                let target = target.to_owned();
+                                move |response| {
+                                    send_irc_line(irc, &target, true, response);
+                                }
+                            };
+
                             let respond_title_future = fetch_github_title(
                                 self.config,
                                 self.github_type,
                                 new_url.clone(),
                             )
-                            .or_else({
+                            .map({
                                 let new_url = new_url.clone();
-                                let respond_with = {
-                                    let target = target.to_owned();
-                                    move |response| {
-                                        send_irc_line(irc, &target, true, response);
+                                move |result| {
+                                    let title;
+                                    match result {
+                                        Ok(t) => title = t,
+                                        Err(err) => {
+                                            respond_with(format!(
+                                                "Error while retrieving title of {new_url}: {err}."
+                                            ));
+                                            title = String::from("UNKNOWN TITLE")
+                                        }
                                     }
-                                };
-
-                                async move |result| -> Result<String, GithubError> {
-                                    respond_with(format!(
-                                        "Error while retrieving title of {new_url}: {result}."
-                                    ));
-                                    Ok(String::from("UNKNOWN TITLE"))
-                                }
-                            })
-                            .map_ok({
-                                let new_url = new_url.clone();
-                                let respond_with = {
-                                    let target = target.to_owned();
-                                    move |response| {
-                                        send_irc_line(irc, &target, true, response);
-                                    }
-                                };
-
-                                move |title| {
                                     respond_with(format!(
                                         "OK, I'll post this discussion to {new_url} ({title})."
                                     ));
@@ -1018,28 +1010,20 @@ impl ChannelData {
                     }
                     (Some(new_url), old_url) if *old_url == *new_url => (),
                     (Some(Some(new_url)), old_url_option) => {
-                        let respond_title_future = fetch_github_title(
-                            self.config, self.github_type, new_url.clone()
-                        )
-                        .or_else({
-                            let new_url = new_url.clone();
-                            let respond_with = {
-                                let target = target.to_owned();
-                                move |response| {
-                                    send_irc_line(irc, &target, true, response);
-                                }
-                            };
-                            async move |result| -> Result<String, GithubError> {
-                                respond_with(format!(
-                                    "Error while retrieving title of {new_url}: {result}."
-                                ));
-                                Ok(String::from("UNKNOWN TITLE"))
-                            }
-                        })
-                        .map_ok({
+                        let respond_title_future = fetch_github_title(self.config, self.github_type, new_url.clone()).map({
                             let old_url_option = old_url_option.clone();
                             let new_url = new_url.clone();
-                            move |title| {
+                            move |result| {
+                                let title;
+                                match result {
+                                    Ok(t) => title = t,
+                                    Err(err) => {
+                                        respond_with(format!(
+                                            "Error while retrieving title of {new_url}: {err}."
+                                        ));
+                                        title = String::from("UNKNOWN TITLE")
+                                    },
+                                }
                                 match old_url_option {
                                     None => respond_with(format!("OK, I'll post this discussion to {new_url} ({title}).")),
                                     Some(old_url) => respond_with(format!("OK, I'll post this discussion to {new_url} ({title}) instead of {old_url} like you said before.")),
