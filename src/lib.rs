@@ -877,6 +877,13 @@ impl ChannelData {
             LazyLock::new(|| Regex::new(r"^\[(.*)\]\(([^ ]*)\)$").unwrap());
         static IVAN_LINK_RE: LazyLock<Regex> =
             LazyLock::new(|| Regex::new(r"^-> (.*) ([^ ]*)$").unwrap());
+        let respond_with = {
+            let target = target.to_owned();
+            move |response| {
+                send_irc_line(irc, &target, true, response);
+            }
+        };
+
         if !line.is_action {
             if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
                 self.start_topic(irc, topic);
@@ -903,13 +910,6 @@ impl ChannelData {
                     match check_github_url(topic_url, self.config, target) {
                         (Some(Some(new_url)), None) => {
                             self.end_topic(irc);
-
-                            let respond_with = {
-                                let target = target.to_owned();
-                                move |response| {
-                                    send_irc_line(irc, &target, true, response);
-                                }
-                            };
 
                             let respond_title_future = fetch_github_title(
                                 self.config,
@@ -972,12 +972,6 @@ impl ChannelData {
         {
             self.end_topic(irc);
         }
-        let respond_with = {
-            let target = target.to_owned();
-            move |response| {
-                send_irc_line(irc, &target, true, response);
-            }
-        };
         match self.current_topic {
             None => {
                 let response =
@@ -1319,7 +1313,7 @@ impl GithubCommentTask {
             if let Some(github_url) = GithubURL::from_string(github_url.clone()) {
                 let comment_text = format!("{}", self.data);
 
-                let send_response = {
+                let respond_with = {
                     let irc = self.irc;
                     let target = self.response_target.clone();
                     move |response: String| {
@@ -1389,7 +1383,7 @@ impl GithubCommentTask {
                                     .collect::<String>()
                             }
                         };
-                        send_response(response_text);
+                        respond_with(response_text);
                     }
                     None => {
                         // Mock the github comments by sending them over IRC
@@ -1406,7 +1400,7 @@ impl GithubCommentTask {
                         send_github_comment_line(
                             format!("!END GITHUB COMMENT IN {}", github_url.url).as_str(),
                         );
-                        send_response(format!(
+                        respond_with(format!(
                             "{} on {}",
                             "Successfully commented", github_url.url
                         ));
