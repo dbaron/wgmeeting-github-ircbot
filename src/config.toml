@@ -131,6 +131,7 @@ github_repos_allowed = [
     "w3c/accname",
     "w3c/html-aam",
     "w3c/css-aam",
+    "w3c/html-aria",
 ]
 
 [channels."#aria-at"]
