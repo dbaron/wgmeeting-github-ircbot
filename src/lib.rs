@@ -18,7 +18,9 @@ use futures::prelude::*;
 use irc::client::prelude::{Client as IrcClient, Command, Message};
 use log::{info, warn};
 use octorust::types::PullsUpdateReviewRequest;
-use octorust::{Client as GithubClient, auth::Credentials as GithubCredentials};
+use octorust::{
+    Client as GithubClient, ClientError as GithubError, auth::Credentials as GithubCredentials,
+};
 use regex::Regex;
 use serde::Deserialize;
 use std::cmp;
@@ -385,32 +387,43 @@ fn handle_bot_command(
                     this_channel_data.github_type,
                     new_url.clone(),
                 )
-                .map_ok({
+                .map({
                     let new_url = new_url.clone();
                     let this_channel_data_arc = Arc::clone(this_channel_data_arc);
                     let response_target = String::from(response_target);
-                    move |title| {
+                    move |result| {
                         let mut this_channel_data = this_channel_data_arc.write().unwrap();
                         let response_target = &*response_target;
-
-                        send_irc_line(
-                            irc,
-                            response_target,
-                            false,
-                            format!("{topic_header}: {title}"),
-                        );
-                        send_irc_line(
-                            irc,
-                            response_target,
-                            response_is_action,
-                            format!("OK, I'll post this discussion to {new_url}."),
-                        );
-                        this_channel_data.start_topic(irc, &title);
-                        this_channel_data
-                            .current_topic
-                            .as_mut()
-                            .expect("just started a topic")
-                            .github_url = Some(new_url);
+                        match result {
+                            Ok(title) => {
+                                send_irc_line(
+                                    irc,
+                                    response_target,
+                                    false,
+                                    format!("{topic_header}: {title}"),
+                                );
+                                send_irc_line(
+                                    irc,
+                                    response_target,
+                                    response_is_action,
+                                    format!("OK, I'll post this discussion to {new_url}"),
+                                );
+                                this_channel_data.start_topic(irc, &title);
+                                this_channel_data
+                                    .current_topic
+                                    .as_mut()
+                                    .expect("just started a topic")
+                                    .github_url = Some(new_url);
+                            }
+                            Err(err) => {
+                                send_irc_line(
+                                    irc,
+                                    response_target,
+                                    response_is_action,
+                                    format!("Error getting title of {new_url}: {err}"),
+                                );
+                            }
+                        }
                     }
                 });
                 let _ = tokio::spawn(respond_title_future);
@@ -857,12 +870,95 @@ impl ChannelData {
     // Returns the response that should be sent to the message over IRC.
     // FIXME: Move this to be a method on IRCState.
     fn add_line(&mut self, irc: &'static IrcClient, target: &str, line: ChannelLine) {
+        static AGENDUM_RE: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(r"^agendum \d+ -- (.*) -- taken up \[from [^ \[\]]*\]$").unwrap()
+        });
+        static MARKDOWN_LINK_RE: LazyLock<Regex> =
+            LazyLock::new(|| Regex::new(r"^\[(.*)\]\(([^ ]*)\)$").unwrap());
+        static IVAN_LINK_RE: LazyLock<Regex> =
+            LazyLock::new(|| Regex::new(r"^-> (.*) ([^ ]*)$").unwrap());
+        let respond_with = {
+            let target = target.to_owned();
+            move |response| {
+                send_irc_line(irc, &target, true, response);
+            }
+        };
+
         if !line.is_action {
             if let Some(ref topic) = strip_ci_prefix(&line.message, "topic:") {
                 self.start_topic(irc, topic);
             } else if let Some(ref subtopic) = strip_ci_prefix(&line.message, "subtopic:") {
                 // Treat subtopic: the same as topic:, at least for now.
                 self.start_topic(irc, subtopic);
+            } else if let Some(ref agendum_captures) = AGENDUM_RE.captures(&*line.message) {
+                let agendum = agendum_captures.get(1).unwrap().as_str();
+                let (topic, topic_url) =
+                    if let Some(ref markdown_captures) = MARKDOWN_LINK_RE.captures(agendum) {
+                        (
+                            markdown_captures.get(1).unwrap().as_str(),
+                            Some(markdown_captures.get(2).unwrap().as_str()),
+                        )
+                    } else if let Some(ref ivan_captures) = IVAN_LINK_RE.captures(agendum) {
+                        (
+                            ivan_captures.get(1).unwrap().as_str(),
+                            Some(ivan_captures.get(2).unwrap().as_str()),
+                        )
+                    } else {
+                        (agendum, None)
+                    };
+                if let Some(topic_url) = topic_url {
+                    match check_github_url(topic_url, self.config, target) {
+                        (Some(Some(new_url)), None) => {
+                            self.end_topic(irc);
+
+                            let respond_title_future = fetch_github_title(
+                                self.config,
+                                self.github_type,
+                                new_url.clone(),
+                            )
+                            .map({
+                                let new_url = new_url.clone();
+                                move |result| {
+                                    let title;
+                                    match result {
+                                        Ok(t) => title = t,
+                                        Err(err) => {
+                                            respond_with(format!(
+                                                "Error while retrieving title of {new_url}: {err}."
+                                            ));
+                                            title = String::from("UNKNOWN TITLE")
+                                        }
+                                    }
+                                    respond_with(format!(
+                                        "OK, I'll post this discussion to {new_url} ({title})."
+                                    ));
+                                }
+                            });
+                            let _ = tokio::spawn(respond_title_future);
+
+                            self.start_topic(irc, topic);
+                            self.current_topic
+                                .as_mut()
+                                .expect("just started a topic")
+                                .github_url = Some(new_url);
+                        }
+                        (None, Some(extract_failure_response)) => {
+                            self.start_topic(irc, topic);
+                            send_irc_line(irc, &target, false, extract_failure_response);
+                        }
+                        _ => panic!("unexpected state"),
+                    }
+                } else {
+                    self.start_topic(irc, topic);
+                }
+                // Skip the code below because we don't want to rerun github URL
+                // detection.  All we need from it is to push the line.
+                self.current_topic
+                    .as_mut()
+                    .expect("just started a topic")
+                    .lines
+                    .push(line);
+                return;
             }
         }
         if (line.is_action
@@ -876,12 +972,6 @@ impl ChannelData {
         {
             self.end_topic(irc);
         }
-        let respond_with = {
-            let target = target.to_owned();
-            move |response| {
-                send_irc_line(irc, &target, true, response);
-            }
-        };
         match self.current_topic {
             None => {
                 let response =
@@ -914,10 +1004,20 @@ impl ChannelData {
                     }
                     (Some(new_url), old_url) if *old_url == *new_url => (),
                     (Some(Some(new_url)), old_url_option) => {
-                        let respond_title_future = fetch_github_title(self.config, self.github_type, new_url.clone()).map_ok({
+                        let respond_title_future = fetch_github_title(self.config, self.github_type, new_url.clone()).map({
                             let old_url_option = old_url_option.clone();
                             let new_url = new_url.clone();
-                            move |title| {
+                            move |result| {
+                                let title;
+                                match result {
+                                    Ok(t) => title = t,
+                                    Err(err) => {
+                                        respond_with(format!(
+                                            "Error while retrieving title of {new_url}: {err}."
+                                        ));
+                                        title = String::from("UNKNOWN TITLE")
+                                    },
+                                }
                                 match old_url_option {
                                     None => respond_with(format!("OK, I'll post this discussion to {new_url} ({title}).")),
                                     Some(old_url) => respond_with(format!("OK, I'll post this discussion to {new_url} ({title}) instead of {old_url} like you said before.")),
@@ -992,25 +1092,22 @@ async fn fetch_github_title<S>(
     config: &'static BotConfig,
     github_type: GithubType,
     s: S,
-) -> Result<String, ()>
+) -> Result<String, GithubError>
 where
     S: Into<String>,
 {
     let new_url = GithubURL::from_string(s).expect("regexp failure");
     let github = github_connection(config, github_type);
-    Ok(match github {
+    match github {
         // When mocking the github connection for tests, pretend it's "TITLE".
         // FIXME: Are there now better methods for this in futures 0.3?
-        None => String::from("TITLE"),
+        None => Ok(String::from("TITLE")),
         Some(github) => github
             .issues()
             .get(&new_url.owner, &new_url.repo, new_url.number)
             .await
-            .map_or_else(
-                |err| format!("COULDN'T GET TITLE due to error {err:?}"),
-                |response| response.body.title,
-            ),
-    })
+            .map(|response| response.body.title),
+    }
 }
 
 /// extract_github_url can be run on any regular line of text received
@@ -1216,7 +1313,7 @@ impl GithubCommentTask {
             if let Some(github_url) = GithubURL::from_string(github_url.clone()) {
                 let comment_text = format!("{}", self.data);
 
-                let send_response = {
+                let respond_with = {
                     let irc = self.irc;
                     let target = self.response_target.clone();
                     move |response: String| {
@@ -1236,18 +1333,22 @@ impl GithubCommentTask {
                             issues.list_labels_on_issue(&owner, &repo, num, 0, 0).await;
                         let response_text = match labels_result {
                             Err(err) => {
-                                format!("UNABLE TO RETRIEVE LABELS ON {url} due to error: {err:?}")
+                                format!(
+                                    "UNABLE TO RETRIEVE LABELS (OR COMMENT) ON {url} due to error: {err}"
+                                )
                             }
                             Ok(labels_response) => {
                                 // TODO: Add the comment in parallel with retrieving the labels.
                                 let comment_body = PullsUpdateReviewRequest { body: comment_text };
-                                let comment_task = issues.create_comment(&owner, &repo, num, &comment_body).then({
+                                let comment_task = issues
+                                    .create_comment(&owner, &repo, num, &comment_body)
+                                    .then({
                                         let url = url.clone();
                                         move |result| {
                                             ok::<String, ()>(match result {
                                                 Ok(_) => format!("Successfully commented on {url}"),
                                                 Err(err) => format!(
-                                                    "UNABLE TO COMMENT on {url} due to error: {err:?}"
+                                                    "UNABLE TO COMMENT on {url} due to error: {err}"
                                                 ),
                                             })
                                         }
@@ -1282,7 +1383,7 @@ impl GithubCommentTask {
                                     .collect::<String>()
                             }
                         };
-                        send_response(response_text);
+                        respond_with(response_text);
                     }
                     None => {
                         // Mock the github comments by sending them over IRC
@@ -1299,7 +1400,7 @@ impl GithubCommentTask {
                         send_github_comment_line(
                             format!("!END GITHUB COMMENT IN {}", github_url.url).as_str(),
                         );
-                        send_response(format!(
+                        respond_with(format!(
                             "{} on {}",
                             "Successfully commented", github_url.url
                         ));

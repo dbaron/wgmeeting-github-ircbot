@@ -1,0 +1,42 @@
+<:Zakim!sid203@public.cloak PRIVMSG #meetingbottest :agendum 1 -- Mobile operating systems -- taken up [from JJ]
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :github: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/1 (TITLE).\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is a simple Test.
+<:Zakim!sid203@public.cloak PRIVMSG #meetingbottest :agendum 2 -- [Add ariaNotify](https://github.com/dbaron/wgmeeting-github-ircbot/pull/3) -- taken up [from jamesn]
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+!The Bot-Testing Working Group just discussed `Mobile operating systems`.
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;Zakim> agendum 1 -- Mobile operating systems -- taken up [from JJ]<br>
+!&lt;dbaron> github: https://github.com/dbaron/wgmeeting-github-ircbot/issues/1<br>
+!&lt;dbaron> This is a simple Test.<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/1
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/1\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/pull/3 (TITLE).\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is another test.
+<:Zakim!sid203@public.cloak PRIVMSG #meetingbottest :agendum 3 -- -> Should the default value of aria-live be undefined instead of off? https://github.com/dbaron/wgmeeting-github-ircbot/issues/2653 -- taken up [from agendabot]
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/pull/3
+!The Bot-Testing Working Group just discussed `Add ariaNotify`.
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;Zakim> agendum 2 -- [Add ariaNotify](https://github.com/dbaron/wgmeeting-github-ircbot/pull/3) -- taken up [from jamesn]<br>
+!&lt;dbaron> This is another test.<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/pull/3
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/pull/3\u{1}
+>PRIVMSG #meetingbottest :\u{1}ACTION OK, I\'ll post this discussion to https://github.com/dbaron/wgmeeting-github-ircbot/issues/2653 (TITLE).\u{1}
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :This is a final test.
+<:dbaron!sid755@public.cloak PRIVMSG #meetingbottest :test-github-bot, end topic
+!!BEGIN GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/2653
+!The Bot-Testing Working Group just discussed `Should the default value of aria-live be undefined instead of off?`.
+!
+!<details><summary>The full IRC log of that discussion</summary>
+!&lt;Zakim> agendum 3 -- -> Should the default value of aria-live be undefined instead of off? https://github.com/dbaron/wgmeeting-github-ircbot/issues/2653 -- taken up [from agendabot]<br>
+!&lt;dbaron> This is a final test.<br>
+!</details>
+!
+!!END GITHUB COMMENT IN https://github.com/dbaron/wgmeeting-github-ircbot/issues/2653
+>PRIVMSG #meetingbottest :\u{1}ACTION Successfully commented on https://github.com/dbaron/wgmeeting-github-ircbot/issues/2653\u{1}
