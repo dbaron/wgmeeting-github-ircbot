@@ -130,8 +130,14 @@ github_repos_allowed = [
     "w3c/core-aam",
     "w3c/accname",
     "w3c/html-aam",
-    "w3c/css-aam",
     "w3c/html-aria",
+    "w3c/dpub-aam",
+    "w3c/dpub-aria",
+    "w3c/mathml-aam",
+    "w3c/css-aam",
+    "w3c/graphics-aria",
+    "w3c/graphics-aam",
+    "w3c/svg-aam",
 ]
 
 [channels."#aria-at"]
