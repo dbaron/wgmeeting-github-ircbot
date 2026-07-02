@@ -537,7 +537,11 @@ fn handle_bot_command(
                                 "  {} ({} lines buffered on \"{}\")",
                                 channel,
                                 topic.lines.len(),
-                                topic.topic
+                                if topic.publish_resolutions_only {
+                                    "[private]"
+                                } else {
+                                    &*topic.topic
+                                }
                             ),
                         );
                         match topic.github_url {
