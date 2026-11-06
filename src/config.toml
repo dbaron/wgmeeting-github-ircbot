@@ -138,7 +138,7 @@ github_repos_allowed = [
     "w3c/graphics-aria",
     "w3c/graphics-aam",
     "w3c/svg-aam",
-    "w3c/a11y-tracking/",
+    "w3c/a11y-tracking",
 ]
 
 [channels."#aria-at"]
