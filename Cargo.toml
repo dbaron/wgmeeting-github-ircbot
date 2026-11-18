@@ -15,7 +15,9 @@ tokio = { version = "1.6", features = ["rt", "macros", "time", "io-util", "net"]
 octorust = { git = "https://github.com/oxidecomputer/third-party-api-clients", branch = "main", default-features = false, features = [ "rustls-tls" ], version="0.11.0-rc.1" }
 serde = "1.0"
 serde_derive = "1.0"
-diff = "0.1"
 toml = "1.0"
 anyhow = "1.0"
 rustls = "0.23"
+
+[dev-dependencies]
+diff = "0.1"
